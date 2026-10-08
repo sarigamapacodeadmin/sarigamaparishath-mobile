@@ -11,6 +11,10 @@ so logins, member profiles, donations and receipts are shared.
 - **Activities**: category filter (Veda, Gou, Gnana, Bhakthi) and a detail page per activity
 - **Donate**: the website's four options (cow maintenance, Veda Pathashala, Gou Dattata with
   cow and period, donation of your choice), paid through Razorpay
+- **Events**: upcoming first, search, status and category filters; detail page with
+  registration (name, email, phone, number of people), as on the website
+- **More**: login or profile, Gallery (category filter, full-screen photo view),
+  Blog (search, categories, articles with related posts) and a link to the website
 - **Profile**: view and edit the member profile, donation totals, logout; creates the
   member record if a login has none
 - **Login**: email or 10-digit mobile number and password; members on the default
@@ -27,6 +31,8 @@ Every screen has the EN / తెలుగు switch in its header, and the choic
 | First login | `POST /api/member/first-login` |
 | Profile | `GET/POST /api/member/me`, updates via Supabase `members` |
 | Activities | `GET /api/activities`, `GET /api/activities/:id` |
+| Events | Supabase `events`; registration via `POST /api/events/:id/register` |
+| Gallery, Blog | Supabase `gallery_photos`, `blog_posts` (published only) |
 | Donations | `POST /api/razorpay/create-order`, Razorpay checkout, `POST /api/razorpay/verify-payment` |
 
 Razorpay runs its standard web checkout inside a WebView
@@ -46,7 +52,18 @@ npx expo start         # scan the QR code with Expo Go on an Android phone
 
 Checks: `npm run typecheck`.
 
-## Building an APK / Play Store bundle
+## Installable APK (GitHub Actions)
+
+`.github/workflows/android-apk.yml` builds an APK on every push to `main`, or by hand
+from the Actions tab ("Android APK" > "Run workflow"). It needs three repository
+secrets (Settings > Secrets and variables > Actions): `EXPO_PUBLIC_SUPABASE_URL`,
+`EXPO_PUBLIC_SUPABASE_ANON_KEY` and `EXPO_PUBLIC_RAZORPAY_KEY_ID`, the same values
+as the website's `NEXT_PUBLIC_*` ones in Vercel. Download the APK from the run's
+Artifacts and open it on the phone (allow installing from this source when asked).
+It is signed with the standard debug key, which is fine for sharing directly; a Play
+Store release needs its own key, below.
+
+## Play Store bundle (EAS)
 
 ```bash
 npx eas-cli@latest login

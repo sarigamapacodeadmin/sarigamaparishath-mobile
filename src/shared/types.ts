@@ -53,3 +53,58 @@ export interface Cow {
   sex: string | null;
   date_of_birth: string | null;
 }
+
+export interface ParishathEvent {
+  id: string;
+  title_en: string;
+  title_te: string;
+  description_en: string | null;
+  description_te: string | null;
+  location_en: string | null;
+  location_te: string | null;
+  event_date: string;
+  event_time: string | null;
+  category: string | null;
+  image_url: string | null;
+  capacity: number | null;
+  registered_count: number;
+  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  organizer_name: string | null;
+  organizer_email?: string | null;
+  organizer_phone?: string | null;
+  difficulty_level: string | null;
+  age_group?: string | null;
+  featured: boolean;
+  registration_required?: boolean | null;
+}
+
+export interface GalleryPhoto {
+  id: string;
+  title_en: string;
+  title_te: string;
+  caption_en: string | null;
+  caption_te: string | null;
+  date: string;
+  category: string;
+  image_url: string;
+  featured: boolean;
+  photographer_name: string | null;
+  alt_text: string | null;
+}
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  title_te?: string | null;
+  slug: string;
+  excerpt: string;
+  excerpt_te?: string | null;
+  content?: string | null;
+  content_te?: string | null;
+  featured_image_url: string | null;
+  category: string;
+  author: string;
+  featured: boolean;
+  views: number;
+  created_at: string;
+}

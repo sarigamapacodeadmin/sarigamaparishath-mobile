@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 import type { Activity, Member } from '../shared/types';
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number, public code?: string) {
+  constructor(message: string, public status: number, public code?: string, public body?: Record<string, unknown>) {
     super(message);
   }
 }
@@ -20,7 +20,7 @@ async function request<T>(path: string, init: RequestInit = {}, withAuth = false
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const code = typeof body?.error === 'string' ? body.error : undefined;
-    throw new ApiError(code || `Request failed (${res.status})`, res.status, code);
+    throw new ApiError(code || `Request failed (${res.status})`, res.status, code, body);
   }
   return body as T;
 }
@@ -89,5 +89,23 @@ export function verifyPayment(payment: { order_id: string; payment_id: string; s
       amount: amountRupees,
       purpose,
     }),
+  });
+}
+
+export interface EventRegistration {
+  name: string;
+  email: string;
+  phone: string;
+  attendees: number;
+}
+
+// Public event registration; a logged-in member's registration is linked to their login
+export async function registerForEvent(eventId: string, registration: EventRegistration) {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  return request<{ registered_count: number; updated: boolean }>(`/api/events/${encodeURIComponent(eventId)}/register`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: JSON.stringify(registration),
   });
 }
