@@ -1,0 +1,20 @@
+// Colours from the web app's theme (app/globals.css)
+export const colors = {
+  brand50: '#f3f4f9',
+  brand100: '#e4e7f2',
+  brand600: '#1f2a5a',
+  brand700: '#182249',
+  gold100: '#f5ecd2',
+  gold200: '#ead7a5',
+  gold500: '#c9a24b',
+  vermilion50: '#fbefec',
+  vermilion200: '#edb8aa',
+  vermilion600: '#b5452b',
+  vermilion700: '#943722',
+  ivory: '#f8f4ec',
+  white: '#ffffff',
+  text: '#1f2937',
+  muted: '#4b5563',
+  subtle: '#6b7280',
+  border: '#e5e7eb',
+};
