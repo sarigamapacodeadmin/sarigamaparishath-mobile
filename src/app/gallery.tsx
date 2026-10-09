@@ -23,7 +23,7 @@ export default function GalleryScreen() {
   const load = useCallback(async () => {
     setError('');
     const { data, error: dbError } = await supabase.from('gallery_photos').select('*').order('date', { ascending: false });
-    if (dbError) setError(t('Could not load the gallery. Pull down to try again.', 'గ్యాలరీ లోడ్ కాలేదు. మళ్ళీ ప్రయత్నించడానికి క్రిందికి లాగండి.'));
+    if (dbError) setError(`${t('Could not load the gallery. Pull down to try again.', 'గ్యాలరీ లోడ్ కాలేదు. మళ్ళీ ప్రయత్నించడానికి క్రిందికి లాగండి.')} (${dbError.message})`);
     else setPhotos((data as GalleryPhoto[]) || []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
