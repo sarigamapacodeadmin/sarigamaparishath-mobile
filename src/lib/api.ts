@@ -57,6 +57,22 @@ export function completeFirstLogin(email: string, password: string) {
   }, true);
 }
 
+// Emails a one-time link to the website's /reset-password page. Same answer
+// whether or not a login was found.
+export function requestPasswordReset(identifier: string) {
+  return request<{ ok: true }>('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ identifier }),
+  });
+}
+
+export function changePassword(password: string) {
+  return request<{ ok: true }>('/api/member/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  }, true);
+}
+
 export interface DonorDetails {
   name: string;
   email: string;

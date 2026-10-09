@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { DonationsExtra } from '../../components/donations-extra';
 import { RazorpayCheckout, type RazorpaySuccess } from '../../components/razorpay-checkout';
 import { Banner, Button, Card, Chip, Field, Screen, Title, styles as ui } from '../../components/ui';
 import { createDonationOrder, fetchMyMember, verifyPayment, type DonorDetails } from '../../lib/api';
@@ -81,6 +82,7 @@ export default function DonateScreen() {
       : `మీరు ${what} కోసం సనాతన ఋషిప్రోక్త గాయత్రీ మహా పరిషత్ కు ${rupees(amount)} విరాళం ఇస్తున్నారు. చెల్లింపు Razorpay ద్వారా సురక్షితంగా జరుగుతుంది.`;
   })();
 
+  const [paidCount, setPaidCount] = useState(0);
   const fail = (text: string) => setMessage({ type: 'error', text });
 
   const donate = async () => {
@@ -115,6 +117,7 @@ export default function DonateScreen() {
           `${rupees(paidAmount)} విరాళం ఇచ్చినందుకు ధన్యవాదాలు! రసీదు ${email} కు పంపించాము`
         ),
       });
+      setPaidCount((n) => n + 1);
       setOptionId(null);
       setDattataCow('');
       setDattataAmount(DATTATA_PLANS[0].amount);
@@ -134,6 +137,7 @@ export default function DonateScreen() {
   return (
     <Screen>
       <Title>{t('Support the Parishath', 'పరిషత్‌కు సహకరించండి')}</Title>
+      <DonationsExtra sections={['stats']} refreshKey={paidCount} />
       {message && <Banner type={message.type} text={message.text} />}
 
       {DONATION_OPTIONS.map((o) => {
@@ -177,7 +181,7 @@ export default function DonateScreen() {
           <View style={styles.wrap}>
             <Chip label={t('Let the Parishath choose', 'పరిషత్ ఎంచుకుంటుంది')} selected={!dattataCow} onPress={() => setDattataCow('')} />
             {cows.map((c) => (
-              <Chip key={c.id} label={c.name} selected={dattataCow === c.name} onPress={() => setDattataCow(c.name)} />
+              <Chip key={c.id} label={c.breed ? `${c.name} (${c.breed})` : c.name} selected={dattataCow === c.name} onPress={() => setDattataCow(c.name)} />
             ))}
           </View>
         </Card>
@@ -207,7 +211,14 @@ export default function DonateScreen() {
             autoCapitalize="none"
           />
           <Field label={t('Phone', 'ఫోన్')} value={donor.phone} onChangeText={(phone) => setDonor((d) => ({ ...d, phone }))} keyboardType="phone-pad" />
-          {summary ? <Text style={[ui.muted, { marginBottom: 8 }]}>{summary}</Text> : null}
+          {summary ? (
+            <Text style={[ui.muted, { marginBottom: 8 }]}>
+              {summary}
+              {EMAIL_RE.test(donor.email.trim())
+                ? t(` The receipt will be emailed to ${donor.email.trim()}.`, ` రసీదు ${donor.email.trim()} కు ఈమెయిల్ చేయబడుతుంది.`)
+                : ''}
+            </Text>
+          ) : null}
           <Button label={amount ? `${t('Donate', 'విరాళం ఇవ్వండి')} ${rupees(amount)}` : t('Donate', 'విరాళం ఇవ్వండి')} onPress={donate} loading={loading} />
         </Card>
       )}
@@ -218,6 +229,8 @@ export default function DonateScreen() {
           'మీ చెల్లింపు సురక్షితం. చెల్లింపులు భారతదేశపు విశ్వసనీయ చెల్లింపు వ్యవస్థ Razorpay ద్వారా జరుగుతాయి.'
         )}
       </Text>
+
+      <DonationsExtra sections={['recent', 'faq']} refreshKey={paidCount} />
 
       {order && (
         <RazorpayCheckout

@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { Banner, Button, Card, Field, Screen, Title, styles as ui } from '../components/ui';
 import { LoginError, useAuth } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/config';
 import { useLanguage } from '../lib/language';
+import { colors } from '../lib/theme';
 
 // Same rules as the website's /login: an email, or the member's 10-digit mobile number
 export default function LoginScreen() {
@@ -73,12 +74,15 @@ export default function LoginScreen() {
           onSubmitEditing={submit}
         />
         <Button label={loading ? t('Logging in...', 'లాగిన్ అవుతోంది...') : t('Login', 'లాగిన్')} onPress={submit} loading={loading} />
+        <Pressable onPress={() => router.push('/forgot-password')} accessibilityRole="link" style={{ marginTop: 14 }}>
+          <Text style={{ color: colors.brand600, fontWeight: '600', textAlign: 'center' }}>
+            {t('Forgot password?', 'పాస్‌వర్డ్ మర్చిపోయారా?')}
+          </Text>
+        </Pressable>
         <Text style={[ui.muted, { textAlign: 'center', marginTop: 16 }]}>
-          {t(
-            'New members are registered by the Parishath. Ask the admin to add you, then log in with your mobile number.',
-            'కొత్త సభ్యులను పరిషత్ నమోదు చేస్తుంది. మిమ్మల్ని చేర్చమని నిర్వాహకులను అడగండి, తర్వాత మీ మొబైల్ నంబర్‌తో లాగిన్ అవ్వండి.'
-          )}
+          {t("Don't have an account?", 'ఖాతా లేదా?')}
         </Text>
+        <Button variant="secondary" label={t('Register here', 'ఇక్కడ నమోదు చేసుకోండి')} onPress={() => router.push('/register')} />
       </Card>
     </Screen>
   );
