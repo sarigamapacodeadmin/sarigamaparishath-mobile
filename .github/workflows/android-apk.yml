@@ -1,5 +1,7 @@
-# Builds an installable Android APK on every push to main (or by hand from the
-# Actions tab). Download it from the run's "Artifacts" section and open it on
+# Pull requests run the quick checks only (a few minutes): typecheck, the
+# Android JavaScript bundle, and a live call to Supabase and the website with
+# the app's own settings. The installable APK (about 20 minutes) is built on
+# every push to main, or by hand from the Actions tab. Download it from the run's "Artifacts" section and open it on
 # the phone. The APK is signed with the standard debug key: fine for sharing
 # with members directly, but a Play Store release needs its own key (EAS).
 name: Android APK
@@ -7,7 +9,6 @@ name: Android APK
 on:
   push:
     branches: [main]
-  # Pull requests build too, to catch a broken build before it reaches main
   pull_request:
   workflow_dispatch:
 
@@ -16,9 +17,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
     env:
       # Public values, the same ones the website uses (repository Settings > Secrets and variables > Actions)
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
@@ -28,21 +29,62 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check settings
+      - name: Check settings and reach Supabase and the website
         run: |
-          missing=""
+          fail=0
           for v in EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_RAZORPAY_KEY_ID; do
-            [ -n "${!v}" ] || missing="$missing $v"
+            raw="${!v}"
+            if [ -z "$raw" ]; then echo "::error::Repository secret $v is missing"; fail=1; continue; fi
+            cleaned=$(printf '%s' "$raw" | tr -d " \r\n\t\"'")
+            [ "$cleaned" = "$raw" ] || echo "::warning::$v contains spaces, line breaks or quotes (the app removes them, but please tidy the secret)"
           done
-          if [ -n "$missing" ]; then
-            # A pull request may build without them (the APK just can't log in or pay)
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-              echo "::warning::Missing repository secrets:$missing"
-            else
-              echo "::error::Add these repository secrets first:$missing"
-              exit 1
-            fi
+          [ "$fail" = 0 ] || exit 1
+
+          url=$(printf '%s' "$EXPO_PUBLIC_SUPABASE_URL" | tr -d " \r\n\t\"'" | sed 's#/$##')
+          key=$(printf '%s' "$EXPO_PUBLIC_SUPABASE_ANON_KEY" | tr -d " \r\n\t\"'")
+          if ! printf '%s' "$url" | grep -Eq '^https://[a-z0-9]+\.supabase\.co$'; then
+            echo "::error::EXPO_PUBLIC_SUPABASE_URL should look like https://<project>.supabase.co (copy NEXT_PUBLIC_SUPABASE_URL from Vercel)"
+            exit 1
           fi
+          for table in events blog_posts gallery_photos faqs; do
+            : > /tmp/out.json
+            code=$(curl -s -o /tmp/out.json -w '%{http_code}' "$url/rest/v1/$table?select=id&limit=3" -H "apikey: $key" -H "Authorization: Bearer $key")
+            if [ "$code" = 200 ]; then
+              echo "Supabase $table: OK, $(grep -o '"id"' /tmp/out.json | wc -l) row(s) in the first 3"
+            else
+              echo "::error::Supabase $table answered HTTP $code: $(head -c 300 /tmp/out.json)"
+              fail=1
+            fi
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$EXPO_PUBLIC_API_URL/api/activities")
+          [ "$code" = 200 ] && echo "Website API: OK" || { echo "::error::Website API /api/activities answered HTTP $code"; fail=1; }
+          exit $fail
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build the Android JavaScript bundle
+        run: npx expo export --platform android --output-dir /tmp/expo-export
+
+  apk:
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      EXPO_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.EXPO_PUBLIC_RAZORPAY_KEY_ID }}
+      EXPO_PUBLIC_API_URL: https://sarigamaparishath.vercel.app
+    steps:
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
@@ -57,9 +99,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - run: npm ci
-
-      - name: Typecheck
-        run: npx tsc --noEmit
 
       - name: Generate the Android project
         run: npx expo prebuild --platform android --no-install
