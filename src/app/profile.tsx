@@ -1,14 +1,14 @@
 import { Redirect, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Banner, Button, Card, Field, Loading, Screen, Title, styles as ui } from '../../components/ui';
-import { ApiError, createMyMember, fetchMyMember } from '../../lib/api';
-import { useAuth } from '../../lib/auth';
-import { useLanguage } from '../../lib/language';
-import { supabase } from '../../lib/supabase';
-import { colors } from '../../lib/theme';
-import { mustChangePassword } from '../../shared/default-login';
-import type { Member } from '../../shared/types';
+import { Banner, Button, Card, Field, Loading, Screen, Title, styles as ui } from '../components/ui';
+import { ApiError, createMyMember, fetchMyMember } from '../lib/api';
+import { useAuth } from '../lib/auth';
+import { useLanguage } from '../lib/language';
+import { supabase } from '../lib/supabase';
+import { colors } from '../lib/theme';
+import { mustChangePassword } from '../shared/default-login';
+import type { Member } from '../shared/types';
 
 const EMPTY_FORM = { name: '', phone: '', city: '', state: '', gotra: '', bio_en: '' };
 

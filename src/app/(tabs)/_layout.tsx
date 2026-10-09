@@ -32,12 +32,16 @@ export default function TabsLayout() {
         options={{ title: t('Activities', 'కార్యకలాపాలు'), tabBarIcon: ({ focused }) => <TabIcon glyph="📿" focused={focused} /> }}
       />
       <Tabs.Screen
+        name="events"
+        options={{ title: t('Events', 'కార్యక్రమాలు'), tabBarIcon: ({ focused }) => <TabIcon glyph="📅" focused={focused} /> }}
+      />
+      <Tabs.Screen
         name="donate"
         options={{ title: t('Donate', 'విరాళం'), tabBarIcon: ({ focused }) => <TabIcon glyph="🙏" focused={focused} /> }}
       />
       <Tabs.Screen
-        name="profile"
-        options={{ title: t('My Profile', 'నా ప్రొఫైల్'), tabBarLabel: t('Profile', 'ప్రొఫైల్'), tabBarIcon: ({ focused }) => <TabIcon glyph="👤" focused={focused} /> }}
+        name="more"
+        options={{ title: t('More', 'మరిన్ని'), tabBarIcon: ({ focused }) => <TabIcon glyph="☰" focused={focused} /> }}
       />
     </Tabs>
   );

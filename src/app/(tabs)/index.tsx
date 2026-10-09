@@ -77,6 +77,19 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      <View style={styles.explore}>
+        {[
+          { icon: '📅', label: t('Events', 'కార్యక్రమాలు'), href: '/events' as const },
+          { icon: '🖼️', label: t('Gallery', 'గ్యాలరీ'), href: '/gallery' as const },
+          { icon: '📝', label: t('Blog', 'బ్లాగ్'), href: '/blog' as const },
+        ].map((item) => (
+          <Pressable key={item.href} onPress={() => router.push(item.href)} accessibilityRole="button" style={styles.tile}>
+            <Text style={{ fontSize: 28 }}>{item.icon}</Text>
+            <Text style={styles.tileLabel}>{item.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
       <Title>{t('Our Core Values', 'మా మూల సూత్రాలు')}</Title>
       {CORE_VALUES.map((value) => (
         <Card key={value.key} style={{ borderTopColor: value.color }}>
@@ -115,4 +128,7 @@ const styles = StyleSheet.create({
   tagline: { fontSize: 16, color: '#374151', textAlign: 'center', lineHeight: 24, marginBottom: 14 },
   cardTitle: { fontSize: 19, color: colors.brand600, fontWeight: '600', marginBottom: 6 },
   more: { color: colors.brand600, fontWeight: '600', marginTop: 10 },
+  explore: { flexDirection: 'row', gap: 10, marginBottom: 24 },
+  tile: { flex: 1, alignItems: 'center', backgroundColor: colors.white, borderWidth: 1, borderColor: colors.gold200, borderRadius: 6, paddingVertical: 14 },
+  tileLabel: { color: colors.brand600, fontWeight: '600', marginTop: 4 },
 });
