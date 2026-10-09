@@ -32,7 +32,10 @@ export default function MoreScreen() {
       {session ? (
         <Row icon="👤" title={t('My Profile', 'నా ప్రొఫైల్')} subtitle={t('Your details and donations', 'మీ వివరాలు మరియు విరాళాలు')} onPress={go('/profile')} />
       ) : (
-        <Row icon="🔑" title={t('Member Login', 'సభ్యుల లాగిన్')} subtitle={t('Email or mobile number', 'ఈమెయిల్ లేదా మొబైల్ నంబర్')} onPress={go('/login')} />
+        <>
+          <Row icon="🔑" title={t('Member Login', 'సభ్యుల లాగిన్')} subtitle={t('Email or mobile number', 'ఈమెయిల్ లేదా మొబైల్ నంబర్')} onPress={go('/login')} />
+          <Row icon="✍️" title={t('Register', 'నమోదు')} subtitle={t('Become a member', 'సభ్యులుగా చేరండి')} onPress={go('/register')} />
+        </>
       )}
       <Row icon="🖼️" title={t('Gallery', 'గ్యాలరీ')} subtitle={t('Photos from Parishath events', 'పరిషత్ కార్యక్రమాల ఫోటోలు')} onPress={go('/gallery')} />
       <Row icon="📝" title={t('Blog', 'బ్లాగ్')} subtitle={t('Articles and teachings', 'వ్యాసాలు మరియు బోధనలు')} onPress={go('/blog')} />

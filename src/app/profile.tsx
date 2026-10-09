@@ -222,6 +222,7 @@ export default function ProfileScreen() {
         </Card>
       )}
 
+      <Button variant="secondary" label={t('Change password', 'పాస్‌వర్డ్ మార్చండి')} onPress={() => router.push('/change-password')} />
       <Button variant="secondary" label={t('Logout', 'లాగౌట్')} onPress={logout} />
     </Screen>
   );
