@@ -24,11 +24,24 @@ export default function ForgotPasswordScreen() {
       await requestPasswordReset(identifier.trim());
       setSent(true);
     } catch (err) {
-      setError(
-        err instanceof ApiError && err.code === 'invalid_identifier'
-          ? t('Please enter your email or 10-digit mobile number.', 'దయచేసి మీ ఈమెయిల్ లేదా 10 అంకెల మొబైల్ నంబర్ ఇవ్వండి.')
-          : t('Could not send the email. Please try again later.', 'ఈమెయిల్ పంపలేకపోయాం. కొద్దిసేపటి తర్వాత ప్రయత్నించండి.')
-      );
+      // Same messages as the website's /forgot-password
+      const messages: Record<string, string> = {
+        invalid_identifier: t('Please enter your email or 10-digit mobile number.', 'దయచేసి మీ ఈమెయిల్ లేదా 10 అంకెల మొబైల్ నంబర్ ఇవ్వండి.'),
+        phone_not_found: t(
+          'No member login has this mobile number. Please try your email, or ask the admin.',
+          'ఈ మొబైల్ నంబర్‌తో సభ్యుల లాగిన్ లేదు. దయచేసి మీ ఈమెయిల్‌తో ప్రయత్నించండి, లేదా నిర్వాహకులను అడగండి.'
+        ),
+        shared_phone: t(
+          'This mobile number belongs to more than one member. Please use your email, or ask the admin.',
+          'ఈ మొబైల్ నంబర్ ఒకరి కంటే ఎక్కువ సభ్యులకు ఉంది. దయచేసి మీ ఈమెయిల్ వాడండి, లేదా నిర్వాహకులను అడగండి.'
+        ),
+        no_email: t(
+          'There is no email address on this login yet, so we cannot send a link. Please ask the admin to reset your password to 123456; you will then set your own email and password.',
+          'ఈ లాగిన్‌కు ఇంకా ఈమెయిల్ లేదు, కాబట్టి లింక్ పంపలేము. దయచేసి మీ పాస్‌వర్డ్‌ను 123456 కు రీసెట్ చేయమని నిర్వాహకులను అడగండి; తర్వాత మీ సొంత ఈమెయిల్, పాస్‌వర్డ్ ఏర్పాటు చేసుకోవచ్చు.'
+        ),
+      };
+      const code = err instanceof ApiError ? err.code : undefined;
+      setError((code && messages[code]) || t('Could not send the email. Please try again later.', 'ఈమెయిల్ పంపలేకపోయాం. కొద్దిసేపటి తర్వాత ప్రయత్నించండి.'));
     } finally {
       setSending(false);
     }
