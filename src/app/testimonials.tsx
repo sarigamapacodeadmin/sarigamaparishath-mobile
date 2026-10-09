@@ -48,7 +48,7 @@ export default function TestimonialsScreen() {
       .select('*')
       .order('featured', { ascending: false })
       .order('created_at', { ascending: false });
-    if (dbError) setError(t('Could not load testimonials. Pull down to try again.', 'అనుభవాలు లోడ్ కాలేదు. మళ్ళీ ప్రయత్నించడానికి క్రిందికి లాగండి.'));
+    if (dbError) setError(`${t('Could not load testimonials. Pull down to try again.', 'అనుభవాలు లోడ్ కాలేదు. మళ్ళీ ప్రయత్నించడానికి క్రిందికి లాగండి.')} (${dbError.message})`);
     else setTestimonials((data as Testimonial[]) || []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

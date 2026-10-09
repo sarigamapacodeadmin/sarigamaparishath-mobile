@@ -25,7 +25,7 @@ export default function BlogListScreen() {
       .select('id, title, title_te, slug, excerpt, excerpt_te, featured_image_url, category, author, featured, views, created_at')
       .eq('status', 'published')
       .order('created_at', { ascending: false });
-    if (dbError) setError(t('Could not load articles. Pull down to try again.', 'వ్యాసాలు లోడ్ కాలేదు. మళ్ళీ ప్రయత్నించడానికి క్రిందికి లాగండి.'));
+    if (dbError) setError(`${t('Could not load articles. Pull down to try again.', 'వ్యాసాలు లోడ్ కాలేదు. మళ్ళీ ప్రయత్నించడానికి క్రిందికి లాగండి.')} (${dbError.message})`);
     else setPosts((data as BlogPost[]) || []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

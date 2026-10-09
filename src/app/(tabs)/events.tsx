@@ -42,7 +42,7 @@ export default function EventsScreen() {
       .select('*')
       .order('event_date', { ascending: true })
       .order('event_time', { ascending: true, nullsFirst: false });
-    if (dbError) setError(t('Could not load events. Pull down to try again.', 'కార్యక్రమాలు లోడ్ కాలేదు. మళ్ళీ ప్రయత్నించడానికి క్రిందికి లాగండి.'));
+    if (dbError) setError(`${t('Could not load events. Pull down to try again.', 'కార్యక్రమాలు లోడ్ కాలేదు. మళ్ళీ ప్రయత్నించడానికి క్రిందికి లాగండి.')} (${dbError.message})`);
     else setEvents(sortUpcomingFirst((data as ParishathEvent[]) || []));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

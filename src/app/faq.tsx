@@ -40,7 +40,7 @@ export default function FAQScreen() {
       .select('*')
       .eq('visible', true)
       .order('order_index', { ascending: true });
-    if (dbError) setError(t('Could not load the questions. Pull down to try again.', 'ప్రశ్నలు లోడ్ కాలేదు. మళ్ళీ ప్రయత్నించడానికి క్రిందికి లాగండి.'));
+    if (dbError) setError(`${t('Could not load the questions. Pull down to try again.', 'ప్రశ్నలు లోడ్ కాలేదు. మళ్ళీ ప్రయత్నించడానికి క్రిందికి లాగండి.')} (${dbError.message})`);
     else setFaqs((data as FAQ[]) || []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
