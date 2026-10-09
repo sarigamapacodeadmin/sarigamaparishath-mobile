@@ -23,6 +23,14 @@ function RootStack() {
       <Stack.Screen name="gallery" options={{ title: t('Gallery', 'గ్యాలరీ') }} />
       <Stack.Screen name="blog/index" options={{ title: t('Blog', 'బ్లాగ్') }} />
       <Stack.Screen name="blog/[slug]" options={{ title: t('Article', 'వ్యాసం') }} />
+      <Stack.Screen name="about" options={{ title: t('About Parishath', 'పరిషత్ పరిచయం') }} />
+      <Stack.Screen name="guruvugaru" options={{ title: t('About Guruvu garu', 'గురువు గారి గురించి') }} />
+      <Stack.Screen name="books/index" options={{ title: t('Books', 'పుస్తకాలు') }} />
+      <Stack.Screen name="books/[id]" options={{ title: t('Book', 'పుస్తకం') }} />
+      <Stack.Screen name="testimonials" options={{ title: t('Testimonials', 'అనుభవాలు') }} />
+      <Stack.Screen name="faq" options={{ title: t('FAQ', 'ప్రశ్నోత్తర మాలిక') }} />
+      <Stack.Screen name="contact" options={{ title: t('Contact', 'సంప్రదించండి') }} />
+      <Stack.Screen name="newsletter" options={{ title: t('Newsletter', 'వార్తాలేఖ') }} />
       <Stack.Screen name="profile" options={{ title: t('My Profile', 'నా ప్రొఫైల్') }} />
       <Stack.Screen name="login" options={{ title: t('Member Login', 'సభ్యుల లాగిన్') }} />
       <Stack.Screen name="register" options={{ title: t('Register', 'నమోదు') }} />

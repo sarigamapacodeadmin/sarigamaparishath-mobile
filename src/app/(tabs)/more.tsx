@@ -39,10 +39,17 @@ export default function MoreScreen() {
       )}
       <Row icon="🖼️" title={t('Gallery', 'గ్యాలరీ')} subtitle={t('Photos from Parishath events', 'పరిషత్ కార్యక్రమాల ఫోటోలు')} onPress={go('/gallery')} />
       <Row icon="📝" title={t('Blog', 'బ్లాగ్')} subtitle={t('Articles and teachings', 'వ్యాసాలు మరియు బోధనలు')} onPress={go('/blog')} />
+      <Row icon="🙏" title={t('About Guruvu garu', 'గురువు గారి గురించి')} subtitle={t('Sri Nemani Subbarao Pantulu garu', 'శ్రీ నేమాని సుబ్బారావు పంతులు గారు')} onPress={go('/guruvugaru')} />
+      <Row icon="🪷" title={t('About Parishath', 'పరిషత్ పరిచయం')} subtitle={t('Vision, aims, team and core values', 'దార్శనికత, లక్ష్యాలు, కార్యవర్గం, విలువలు')} onPress={go('/about')} />
+      <Row icon="📚" title={t('Books', 'పుస్తకాలు')} subtitle={t('Parishath publications', 'పరిషత్ ప్రచురణలు')} onPress={go('/books')} />
+      <Row icon="💬" title={t('Testimonials', 'అనుభవాలు')} subtitle={t('Experiences of members', 'సభ్యుల అనుభవాలు')} onPress={go('/testimonials')} />
+      <Row icon="❓" title={t('FAQ', 'ప్రశ్నోత్తర మాలిక')} subtitle={t('Frequently asked questions', 'తరచుగా అడిగే ప్రశ్నలు')} onPress={go('/faq')} />
+      <Row icon="📞" title={t('Contact', 'సంప్రదించండి')} subtitle={t('Phone and message form', 'ఫోన్ మరియు సందేశ ఫారం')} onPress={go('/contact')} />
+      <Row icon="✉️" title={t('Newsletter', 'వార్తాలేఖ')} subtitle={t('Updates by email', 'ఈమెయిల్ ద్వారా సమాచారం')} onPress={go('/newsletter')} />
       <Row
         icon="🌐"
         title={t('Website', 'వెబ్‌సైట్')}
-        subtitle={t('Books, FAQ, contact and more', 'పుస్తకాలు, ప్రశ్నలు, సంప్రదింపు మరియు మరిన్ని')}
+        subtitle={t('sarigamaparishath.vercel.app', 'sarigamaparishath.vercel.app')}
         onPress={() => Linking.openURL(API_URL)}
       />
     </Screen>
