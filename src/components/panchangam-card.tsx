@@ -9,11 +9,9 @@ import { colors } from '../lib/theme';
 import {
   PANCHANGAM_LABELS,
   computePanchangam,
-  formatIstRange,
   formatIstTime,
   istDateOf,
   shortMonth,
-  untilText,
   type Panchangam,
 } from '../shared/panchangam';
 
@@ -86,24 +84,6 @@ export function PanchangamCard() {
   const t = (name: { en: string; te: string }) => name[language];
   const day = String(istDateOf(p.date).day).padStart(2, '0');
 
-  const details: Array<[string, string, string?]> = [
-    [L.samvatsara, t(p.samvatsara)],
-    [L.ayana, t(p.ayana)],
-    [L.ritu, t(p.ritu)],
-    [L.masa, t(p.masa)],
-    [L.paksha, t(p.paksha)],
-    [L.tithi, t(p.tithi.name), untilText(p.tithi, p, language)],
-    [L.nakshatra, t(p.nakshatra.name), untilText(p.nakshatra, p, language)],
-    [L.yoga, t(p.yoga.name), untilText(p.yoga, p, language)],
-    [L.karana, t(p.karana.name), untilText(p.karana, p, language)],
-    [L.sunrise, formatIstTime(p.sunrise)],
-    [L.sunset, formatIstTime(p.sunset)],
-    [L.brahma, formatIstRange(p.brahmaMuhurtam)],
-    [L.rahu, formatIstRange(p.rahuKalam)],
-    [L.yama, formatIstRange(p.yamagandam)],
-    [L.gulika, formatIstRange(p.gulikaKalam)],
-  ];
-
   return (
     <View style={styles.card} accessibilityLabel={L.today}>
       <View style={styles.top}>
@@ -152,29 +132,14 @@ export function PanchangamCard() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        {details.map(([label, value, until]) => (
-          <View key={label} style={styles.row}>
-            <Text style={styles.label}>{label}</Text>
-            <Text style={styles.value}>
-              {value}
-              {until ? <Text style={styles.until}> · {until}</Text> : null}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={[styles.section, styles.observances]}>
-        <Text style={styles.obsTitle}>{L.observances}</Text>
-        {p.observances.map((o) => (
-          <View key={o.name.en} style={styles.obsRow}>
-            <Text style={styles.star}>✦</Text>
-            <Text style={styles.obsText}>
-              <Text style={styles.obsName}>{t(o.name)}</Text>
-              {o.note ? <Text style={styles.until}> – {t(o.note)}</Text> : null}
-            </Text>
-          </View>
-        ))}
+      {/* Sunrise and sunset */}
+      <View style={[styles.section, styles.times]}>
+        <Text style={styles.time}>
+          {L.sunrise} <Text style={styles.timeValue}>{formatIstTime(p.sunrise)}</Text>
+        </Text>
+        <Text style={styles.time}>
+          {L.sunset} <Text style={styles.timeValue}>{formatIstTime(p.sunset)}</Text>
+        </Text>
       </View>
     </View>
   );
@@ -217,14 +182,7 @@ const styles = StyleSheet.create({
   sankalpam: { fontSize: 15, lineHeight: 26, color: colors.text, marginTop: 8 },
   more: { color: colors.brand600, fontWeight: '600', marginTop: 4 },
   section: { borderTopWidth: 1, borderTopColor: colors.gold200, padding: 14 },
-  row: { flexDirection: 'row', paddingVertical: 3 },
-  label: { width: 118, fontSize: 13, color: colors.subtle },
-  value: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.text },
-  until: { fontWeight: '400', color: colors.subtle },
-  observances: { backgroundColor: '#fbf7ec' },
-  obsTitle: { fontSize: 17, color: colors.brand600, fontWeight: '600', marginBottom: 6 },
-  obsRow: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
-  star: { color: colors.gold500 },
-  obsText: { flex: 1, fontSize: 13, lineHeight: 20 },
-  obsName: { fontWeight: '700', color: colors.text },
+  times: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 24, rowGap: 4, backgroundColor: '#fbf7ec', paddingVertical: 10 },
+  time: { fontSize: 14, color: colors.subtle },
+  timeValue: { fontWeight: '700', color: colors.text },
 });
