@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { PanchangamCard } from '../../components/panchangam-card';
 import { Button, Card, Screen, Title, styles as ui } from '../../components/ui';
 import { fetchActivities } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -60,6 +61,9 @@ export default function HomeScreen() {
       <View style={styles.hero}>
         <Image source={require('../../../assets/parishath-logo.jpg')} style={styles.logo} accessibilityIgnoresInvertColors />
         <Text style={styles.name}>{t('Sanatana Rishiproktha Gayatri Maha Parishath', 'సనాతన ఋషిప్రోక్త గాయత్రీ మహా పరిషత్')}</Text>
+        <View style={{ alignSelf: 'stretch', marginTop: 14 }}>
+          <PanchangamCard />
+        </View>
         <Text style={styles.ornament}>— ✦ —</Text>
         <Text style={styles.tagline}>
           {t(
