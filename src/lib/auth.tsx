@@ -1,6 +1,6 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { mustChangePassword } from '../shared/default-login';
+import { mustChangePassword, tempPasswordExpired } from '../shared/default-login';
 import { ApiError, phoneLogin } from './api';
 import { supabase } from './supabase';
 
@@ -16,7 +16,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export type LoginErrorCode = 'shared_phone' | 'invalid_phone_login' | 'unknown';
+export type LoginErrorCode = 'shared_phone' | 'invalid_phone_login' | 'code_expired' | 'email_not_confirmed' | 'unknown';
 
 export class LoginError extends Error {
   constructor(public code: LoginErrorCode, message: string) {
@@ -43,15 +43,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (id.includes('@')) {
       const { data, error } = await supabase.auth.signInWithPassword({ email: id, password });
+      if (error?.code === 'email_not_confirmed') throw new LoginError('email_not_confirmed', error.message);
       if (error) throw new LoginError('unknown', error.message);
+      // An admin reset code past its 24 hours
+      if (tempPasswordExpired(data.user)) {
+        await supabase.auth.signOut();
+        throw new LoginError('code_expired', 'code_expired');
+      }
       user = data.user;
     } else {
       let tokens: { access_token: string; refresh_token: string };
       try {
         tokens = await phoneLogin(id, password);
       } catch (err) {
-        const shared = err instanceof ApiError && err.code === 'shared_phone';
-        throw new LoginError(shared ? 'shared_phone' : 'invalid_phone_login', err instanceof Error ? err.message : 'Login failed');
+        const code = err instanceof ApiError ? err.code : undefined;
+        const known = code === 'shared_phone' || code === 'code_expired' || code === 'email_not_confirmed' ? code : 'invalid_phone_login';
+        throw new LoginError(known, err instanceof Error ? err.message : 'Login failed');
       }
       const { data, error } = await supabase.auth.setSession(tokens);
       if (error) throw new LoginError('unknown', error.message);

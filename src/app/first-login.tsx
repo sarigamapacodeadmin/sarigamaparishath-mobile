@@ -7,7 +7,7 @@ import { useAuth } from '../lib/auth';
 import { useLanguage } from '../lib/language';
 import { supabase } from '../lib/supabase';
 
-// Members who logged in with the default password (123456) set their own
+// Members who logged in with an admin reset code set their own
 // email and password here, as on the website's /member/first-login.
 export default function FirstLoginScreen() {
   const { t } = useLanguage();

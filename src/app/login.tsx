@@ -25,7 +25,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const { mustChange } = await signIn(identifier, password);
-      // Members on the default password set their own email and password first
+      // Members on an admin reset code set their own email and password first
       router.replace(mustChange ? '/first-login' : '/profile');
     } catch (err) {
       if (err instanceof LoginError && err.code === 'shared_phone') {
@@ -33,6 +33,20 @@ export default function LoginScreen() {
           t(
             'This mobile number belongs to more than one member. Please log in with your email, or ask the admin.',
             'ఈ మొబైల్ నంబర్ ఒకరి కంటే ఎక్కువ సభ్యులకు ఉంది. దయచేసి ఈమెయిల్‌తో లాగిన్ అవ్వండి, లేదా నిర్వాహకులను అడగండి.'
+          )
+        );
+      } else if (err instanceof LoginError && err.code === 'code_expired') {
+        setError(
+          t(
+            'Your reset code has expired (codes work for 24 hours). Please ask the admin for a new one.',
+            'మీ రీసెట్ కోడ్ గడువు ముగిసింది (కోడ్ 24 గంటలు మాత్రమే పనిచేస్తుంది). దయచేసి కొత్త కోడ్ కోసం నిర్వాహకులను అడగండి.'
+          )
+        );
+      } else if (err instanceof LoginError && err.code === 'email_not_confirmed') {
+        setError(
+          t(
+            'Please confirm your email first: open the link we sent when you registered.',
+            'ముందుగా మీ ఈమెయిల్ ధృవీకరించండి: నమోదు చేసినప్పుడు మేము పంపిన లింక్ తెరవండి.'
           )
         );
       } else if (err instanceof LoginError && err.code === 'invalid_phone_login') {

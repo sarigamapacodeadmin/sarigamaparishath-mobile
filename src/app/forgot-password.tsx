@@ -36,8 +36,8 @@ export default function ForgotPasswordScreen() {
           'ఈ మొబైల్ నంబర్ ఒకరి కంటే ఎక్కువ సభ్యులకు ఉంది. దయచేసి మీ ఈమెయిల్ వాడండి, లేదా నిర్వాహకులను అడగండి.'
         ),
         no_email: t(
-          'There is no email address on this login yet, so we cannot send a link. Please ask the admin to reset your password to 123456; you will then set your own email and password.',
-          'ఈ లాగిన్‌కు ఇంకా ఈమెయిల్ లేదు, కాబట్టి లింక్ పంపలేము. దయచేసి మీ పాస్‌వర్డ్‌ను 123456 కు రీసెట్ చేయమని నిర్వాహకులను అడగండి; తర్వాత మీ సొంత ఈమెయిల్, పాస్‌వర్డ్ ఏర్పాటు చేసుకోవచ్చు.'
+          'There is no email address on this login yet, so we cannot send a link. Please ask the admin for a password reset code; you will then set your own email and password.',
+          'ఈ లాగిన్‌కు ఇంకా ఈమెయిల్ లేదు, కాబట్టి లింక్ పంపలేము. దయచేసి పాస్‌వర్డ్ రీసెట్ కోడ్ కోసం నిర్వాహకులను అడగండి; తర్వాత మీ సొంత ఈమెయిల్, పాస్‌వర్డ్ ఏర్పాటు చేసుకోవచ్చు.'
         ),
       };
       const code = err instanceof ApiError ? err.code : undefined;
@@ -77,8 +77,8 @@ export default function ForgotPasswordScreen() {
         )}
         <Text style={[ui.muted, { textAlign: 'center', marginTop: 14 }]}>
           {t(
-            'Members who have no email on their login can ask the admin to reset their password to 123456.',
-            'లాగిన్‌కు ఈమెయిల్ లేని సభ్యులు తమ పాస్‌వర్డ్‌ను 123456 కు రీసెట్ చేయమని నిర్వాహకులను అడగవచ్చు.'
+            'Members who have no email on their login can ask the admin for a password reset code.',
+            'లాగిన్‌కు ఈమెయిల్ లేని సభ్యులు పాస్‌వర్డ్ రీసెట్ కోడ్ కోసం నిర్వాహకులను అడగవచ్చు.'
           )}
         </Text>
         <Button variant="secondary" label={t('Back to login', 'లాగిన్‌కు తిరిగి')} onPress={() => router.back()} />
