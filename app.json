@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.sarigamaparishath.app"
+      "package": "com.sarigamaparishath.app",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png",
