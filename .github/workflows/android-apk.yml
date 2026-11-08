@@ -104,12 +104,70 @@ jobs:
 
       - run: npm ci
 
+      # Fetch Maven Central libraries from Google's mirror of it. On 8 Nov 2026
+      # repo.maven.apache.org kept redirecting the Kotlin compiler jar to a
+      # GitHub download that answered 504, failing every build; the mirror
+      # serves the same files.
+      - name: Use Google's Maven Central mirror
+        run: |
+          mkdir -p "$GRADLE_USER_HOME/init.d"
+          cat > "$GRADLE_USER_HOME/init.d/maven-central-mirror.gradle" <<'EOF'
+          def mirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+          def useMirror = { RepositoryHandler repos ->
+            repos.withType(MavenArtifactRepository).configureEach { r ->
+              if (r.url.toString().startsWith('https://repo.maven.apache.org/maven2')) r.url = mirror
+            }
+          }
+          beforeSettings { s ->
+            useMirror(s.pluginManagement.repositories)
+            useMirror(s.dependencyResolutionManagement.repositories)
+            useMirror(s.buildscript.repositories)
+          }
+          allprojects { p ->
+            useMirror(p.buildscript.repositories)
+            useMirror(p.repositories)
+          }
+          EOF
+
       - name: Generate the Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Build release APK
+      # services.gradle.org is sometimes slow or briefly down (504 / read
+      # timeouts). Give the wrapper download 2 minutes instead of 10 seconds
+      # and retry it a few times before starting the real build.
+      - name: Download Gradle (with retries)
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+        run: |
+          sed -i 's/^networkTimeout=.*/networkTimeout=120000/' gradle/wrapper/gradle-wrapper.properties
+          grep -q '^networkTimeout=' gradle/wrapper/gradle-wrapper.properties || echo 'networkTimeout=120000' >> gradle/wrapper/gradle-wrapper.properties
+          for attempt in 1 2 3 4 5; do
+            if ./gradlew --version --no-daemon; then exit 0; fi
+            echo "::warning::Gradle download attempt $attempt failed, retrying in $((attempt * 30)) seconds"
+            sleep $((attempt * 30))
+          done
+          echo "::error::Could not download Gradle from services.gradle.org after 5 attempts (their server is down; re-run later)"
+          exit 1
+
+      # Library downloads (Maven Central, GitHub release files) can hit the same
+      # 504s. Gradle retries each download itself, and anything that did
+      # download stays in its cache, so a second or third build attempt only
+      # fetches what is still missing.
+      - name: Build release APK (with retries)
+        working-directory: android
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew assembleRelease --no-daemon \
+                -Dorg.gradle.internal.repository.max.retries=8 \
+                -Dorg.gradle.internal.repository.initial.backoff=2000 \
+                -Dorg.gradle.internal.http.connectionTimeout=120000 \
+                -Dorg.gradle.internal.http.socketTimeout=120000; then
+              exit 0
+            fi
+            [ "$attempt" = 3 ] && break
+            echo "::warning::Build attempt $attempt failed, retrying in $((attempt * 60)) seconds (often a download server timing out)"
+            sleep $((attempt * 60))
+          done
+          exit 1
 
       - uses: actions/upload-artifact@v4
         with:
