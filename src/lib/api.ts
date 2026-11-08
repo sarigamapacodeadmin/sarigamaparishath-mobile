@@ -50,6 +50,16 @@ export function createMyMember(fields: { name: string; phone: string; city?: str
   return request<Member>('/api/member/me', { method: 'POST', body: JSON.stringify(fields) }, true);
 }
 
+// Saves the member's own profile, including birth details (checked on the server)
+export function updateMyMember(fields: Record<string, string>) {
+  return request<Member>('/api/member/me', { method: 'PATCH', body: JSON.stringify(fields) }, true);
+}
+
+// Clears birth details, city, state, gotra, bio and language; name, phone and email stay
+export function deleteMyPersonalData() {
+  return request<Member>('/api/member/personal-data', { method: 'DELETE' }, true);
+}
+
 export function completeFirstLogin(email: string, password: string) {
   return request<{ ok: true; email: string }>('/api/member/first-login', {
     method: 'POST',

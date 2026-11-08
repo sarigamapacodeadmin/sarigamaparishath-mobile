@@ -1,4 +1,5 @@
-// Daily Telugu panchangam (amanta, Lahiri ayanamsa) for Hyderabad, worked out
+// Daily Telugu panchangam (amanta, Lahiri ayanamsa) for Hyderabad or another
+// place in India (times are always India time), worked out
 // from the Sun's and Moon's positions with astronomy-engine, so no API is needed.
 // Values follow the usual Telugu calendar convention: the tithi, nakshatra, yoga
 // and karana are the ones running at sunrise, with the time each one ends.
@@ -20,9 +21,30 @@ export interface PanchangamElement {
   next: Name;
 }
 
+export type ObservanceKind = 'festival' | 'vrata' | 'monthly' | 'daily';
+
 export interface Observance {
   name: Name;
   note?: Name;
+  // festival: yearly festivals and sankrantis; vrata: seasonal days such as
+  // Kartika Somavaram; monthly: Ekadashi, Pradosham...; daily: everyday sadhana
+  kind?: ObservanceKind;
+  tag?: 'ekadashi' | 'purnima' | 'amavasya';
+}
+
+export interface PanchangamLocation {
+  latitude: number;
+  longitude: number;
+  elevation?: number; // metres
+  name: Name;
+}
+
+// One of the 24 horas from sunrise to the next sunrise, each ruled by a planet
+export interface Hora {
+  planet: number; // into HORA_PLANETS: 0 Sun, 1 Moon, 2 Mars, 3 Mercury, 4 Jupiter, 5 Venus, 6 Saturn
+  start: Date;
+  end: Date;
+  night: boolean;
 }
 
 export interface Panchangam {
@@ -46,15 +68,23 @@ export interface Panchangam {
   yamagandam: [Date, Date];
   gulikaKalam: [Date, Date];
   brahmaMuhurtam: [Date, Date];
+  abhijit: [Date, Date]; // the 8th of 15 daytime muhurtas (traditionally skipped on Wednesdays)
+  durmuhurtam: [Date, Date][];
+  horas: Hora[];
+  nextSunrise: Date;
+  weekdayIndex: number; // 0 = Sunday
+  nakshatraIndex: number; // at sunrise, 0 = Ashvini
+  moonRashiIndex: number; // at sunrise, 0 = Mesha
   moon: { illumination: number; waxing: boolean };
   sankalpam: Name;
   observances: Observance[];
   location: Name;
 }
 
-export const HYDERABAD = {
+export const HYDERABAD: PanchangamLocation = {
   latitude: 17.385,
   longitude: 78.4867,
+  elevation: 500,
   name: { en: 'Hyderabad, Telangana', te: 'హైదరాబాద్, తెలంగాణ' },
 };
 
@@ -170,6 +200,22 @@ const DAY_DEVOTION: Name[] = [
 
 // Which eighth of the daytime (1-8) each period falls in, Sunday first
 const RAHU_PART = [8, 2, 7, 5, 6, 4, 3];
+
+// Durmuhurtam, Sunday first: [muhurta number 1-15, at night?]
+const DURMUHURTAM: [number, boolean][][] = [
+  [[14, false]],
+  [[9, false], [12, false]],
+  [[4, false], [7, true]],
+  [[8, false]],
+  [[6, false], [12, false]],
+  [[4, false], [9, false]],
+  [[1, false], [2, false]],
+];
+
+// Planets in hora order (each hora is ruled by the next one in this list),
+// and the planet of each weekday, Sunday first. Indexes are into HORA_PLANETS.
+const HORA_ORDER = [0, 5, 3, 1, 6, 4, 2];
+const WEEKDAY_PLANET = [0, 1, 2, 3, 4, 5, 6];
 const YAMA_PART = [5, 4, 3, 2, 1, 7, 6];
 const GULIKA_PART = [7, 6, 5, 4, 3, 2, 1];
 
@@ -224,8 +270,8 @@ function findCrossing(f: (d: Date) => number, target: number, start: Date, limit
   return null;
 }
 
-function riseSet(direction: 1 | -1, from: Date): Date {
-  const observer = new Astronomy.Observer(HYDERABAD.latitude, HYDERABAD.longitude, 500);
+function riseSet(direction: 1 | -1, from: Date, place: PanchangamLocation = HYDERABAD): Date {
+  const observer = new Astronomy.Observer(place.latitude, place.longitude, place.elevation ?? 0);
   const t = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observer, direction, from, 1);
   // Hyderabad always has a sunrise and sunset; fall back to 6 AM / 6 PM just in case
   return t ? t.date : new Date(from.getTime() + (direction === 1 ? 6 : 18) * 3600000);
@@ -295,6 +341,8 @@ interface TithiRule {
   name: Name;
   note?: Name;
 }
+
+const TITHI_TAGS: Record<number, Observance['tag']> = { 10: 'ekadashi', 25: 'ekadashi', 14: 'purnima', 29: 'amavasya' };
 
 const rule = (masa: number | null, tithi: number, kala: Kala, name: Name, note?: Name): TithiRule => ({
   masa,
@@ -408,7 +456,8 @@ interface ObservanceContext extends DayTimes {
 
 function observancesFor(c: ObservanceContext): Observance[] {
   const out: Observance[] = [];
-  const add = (name: Name, note?: Name) => out.push(note ? { name, note } : { name });
+  const add = (name: Name, note?: Name, kind: ObservanceKind = 'vrata', tag?: Observance['tag']) =>
+    out.push({ name, ...(note ? { note } : {}), kind, ...(tag ? { tag } : {}) });
 
   // Festivals are not kept in an Adhika month
   const festivalTithis = new Set<number>();
@@ -420,7 +469,7 @@ function observancesFor(c: ObservanceContext): Observance[] {
     if (f.masa !== null && f.masa !== masa) continue;
     if (!tithiFallsToday(f.tithi, f.kala, c)) continue;
     if (f.masa !== null) festivalTithis.add(f.tithi);
-    add(f.name, f.note);
+    add(f.name, f.note, f.masa === null ? 'monthly' : 'festival', TITHI_TAGS[f.tithi]);
   }
 
   // The Sun entering a new sign; one that happens after sunset is kept the next day
@@ -429,13 +478,13 @@ function observancesFor(c: ObservanceContext): Observance[] {
   const after = rashiAtSunset(c.sunset);
   if (before !== after) {
     const r = RASHIS[after];
-    if (after === 9) add(n('Makara Sankranti', 'మకర సంక్రాంతి'));
-    else add(n(`${r.en} Sankranti`, `${r.te} సంక్రమణం`));
+    if (after === 9) add(n('Makara Sankranti', 'మకర సంక్రాంతి'), undefined, 'festival');
+    else add(n(`${r.en} Sankranti`, `${r.te} సంక్రమణం`), undefined, 'festival');
   }
 
   // Vaikuntha (Mukkoti) Ekadashi is the Shukla Ekadashi while the Sun is in Dhanus
   if (c.sunRashi === 8 && tithiFallsToday(10, 'sunrise', c)) {
-    add(n('Vaikuntha Ekadashi (Mukkoti Ekadashi)', 'వైకుంఠ ఏకాదశి (ముక్కోటి ఏకాదశి)'));
+    add(n('Vaikuntha Ekadashi (Mukkoti Ekadashi)', 'వైకుంఠ ఏకాదశి (ముక్కోటి ఏకాదశి)'), undefined, 'festival', 'ekadashi');
   }
 
   if (!c.adhika) {
@@ -452,8 +501,8 @@ function observancesFor(c: ObservanceContext): Observance[] {
   }
   if (c.sunRashi === 8) add(n('Dhanurmasam – Tiruppavai', 'ధనుర్మాసం – తిరుప్పావై'));
 
-  add(n('Sandhyavandanam and Gayatri japam', 'సంధ్యావందనం, గాయత్రీ జపం'));
-  add(DAY_DEVOTION[c.weekday]);
+  add(n('Sandhyavandanam and Gayatri japam', 'సంధ్యావందనం, గాయత్రీ జపం'), undefined, 'daily');
+  add(DAY_DEVOTION[c.weekday], undefined, 'daily');
   return out;
 }
 
@@ -505,14 +554,14 @@ export function istDateOf(now: Date): { year: number; month: number; day: number
   return { year: ist.getUTCFullYear(), month: ist.getUTCMonth(), day: ist.getUTCDate() };
 }
 
-export function computePanchangam(now: Date = new Date()): Panchangam {
+export function computePanchangam(now: Date = new Date(), place: PanchangamLocation = HYDERABAD): Panchangam {
   const { year, month, day } = istDateOf(now);
   const midnight = new Date(Date.UTC(year, month, day) - IST_MS);
   const weekday = new Date(Date.UTC(year, month, day)).getUTCDay();
 
-  const sunrise = riseSet(1, midnight);
-  const sunset = riseSet(-1, sunrise);
-  const nextSunrise = riseSet(1, new Date(midnight.getTime() + DAY_MS));
+  const sunrise = riseSet(1, midnight, place);
+  const sunset = riseSet(-1, sunrise, place);
+  const nextSunrise = riseSet(1, new Date(midnight.getTime() + DAY_MS), place);
 
   // Lunar month: named from the Sun's sign at the new moon that began it (amanta);
   // a month with no sankranti in it is Adhika
@@ -564,6 +613,28 @@ export function computePanchangam(now: Date = new Date()): Panchangam {
     new Date(sunrise.getTime() + k * part),
   ];
 
+  // Daytime and night each split into 15 muhurtas
+  const dayMuhurta = (sunset.getTime() - sunrise.getTime()) / 15;
+  const nightMuhurta = (nextSunrise.getTime() - sunset.getTime()) / 15;
+  const muhurta = (k: number, night = false): [Date, Date] => {
+    const base = night ? sunset.getTime() : sunrise.getTime();
+    const len = night ? nightMuhurta : dayMuhurta;
+    return [new Date(base + (k - 1) * len), new Date(base + k * len)];
+  };
+  const durmuhurtam = DURMUHURTAM[weekday].map(([k, night]) => muhurta(k, night));
+
+  // Horas: 12 by day and 12 by night, the first ruled by the weekday's planet
+  const horas: Hora[] = [];
+  const dayHora = (sunset.getTime() - sunrise.getTime()) / 12;
+  const nightHora = (nextSunrise.getTime() - sunset.getTime()) / 12;
+  const first = HORA_ORDER.indexOf(WEEKDAY_PLANET[weekday]);
+  for (let i = 0; i < 24; i++) {
+    const night = i >= 12;
+    const start = night ? sunset.getTime() + (i - 12) * nightHora : sunrise.getTime() + i * dayHora;
+    const len = night ? nightHora : dayHora;
+    horas.push({ planet: HORA_ORDER[(first + i) % 7], start: new Date(start), end: new Date(start + len), night });
+  }
+
   const phase = Astronomy.MoonPhase(sunrise);
   const illumination = Astronomy.Illumination(Astronomy.Body.Moon, sunrise).phase_fraction;
 
@@ -588,6 +659,13 @@ export function computePanchangam(now: Date = new Date()): Panchangam {
     yamagandam: slot(YAMA_PART[weekday]),
     gulikaKalam: slot(GULIKA_PART[weekday]),
     brahmaMuhurtam: [new Date(sunrise.getTime() - 96 * 60000), new Date(sunrise.getTime() - 48 * 60000)],
+    abhijit: muhurta(8),
+    durmuhurtam,
+    horas,
+    nextSunrise,
+    weekdayIndex: weekday,
+    nakshatraIndex: Math.floor(siderealMoon(sunrise) / (360 / 27)) % 27,
+    moonRashiIndex: Math.floor(siderealMoon(sunrise) / 30) % 12,
     moon: { illumination, waxing: phase < 180 },
     sankalpam: sankalpam({
       samvatsara,
@@ -603,7 +681,7 @@ export function computePanchangam(now: Date = new Date()): Panchangam {
       uttarayana,
     }),
     observances,
-    location: HYDERABAD.name,
+    location: place.name,
   };
 }
 
@@ -689,6 +767,15 @@ export const PANCHANGAM_LABELS = {
   },
 };
 
+// "Calculated for sunrise at Vijayawada (...)" for the place the panchangam is for
+export function methodText(p: Panchangam, language: PanchangamLanguage): string {
+  if (p.location.en === HYDERABAD.name.en) return PANCHANGAM_LABELS[language].method;
+  const place = p.location[language];
+  return language === 'en'
+    ? `Calculated for sunrise at ${place} (Lahiri ayanamsa, amanta months). Times are India time.`
+    : `${place} సూర్యోదయం ఆధారంగా లెక్కించబడింది (లాహిరి అయనాంశ, అమాంత మాసాలు). సమయాలు భారత కాలమానం.`;
+}
+
 // "till 9:31 PM" / "9:31 PM వరకు", marking times after midnight
 export function untilText(el: PanchangamElement, p: Panchangam, language: PanchangamLanguage): string {
   const L = PANCHANGAM_LABELS[language];
@@ -696,4 +783,105 @@ export function untilText(el: PanchangamElement, p: Panchangam, language: Pancha
   const time = formatIstTime(el.endsAt);
   const nextDay = el.endsAt.getTime() >= p.date.getTime() + 86400000 ? ` ${L.nextDay}` : '';
   return language === 'en' ? `${L.till} ${time}${nextDay}` : `${time}${nextDay} వరకు`;
+}
+
+// ---------------------------------------------------------------------------
+// Date search (used by the Parishath Bot)
+// ---------------------------------------------------------------------------
+
+export type DayMoment = 'sunrise' | 'sunset';
+
+export const NAKSHATRA_NAMES: Name[] = NAKSHATRAS;
+export const RASHI_NAMES: Name[] = RASHIS;
+
+// Where the Moon is at a moment: nakshatra (0 = Ashvini), its pada (1-4) and sign (0 = Mesha)
+export function moonPositionAt(date: Date): { nakshatra: number; pada: number; rashi: number } {
+  const lon = siderealMoon(date);
+  const span = 360 / 27;
+  return {
+    nakshatra: Math.floor(lon / span) % 27,
+    pada: Math.floor((lon % span) / (span / 4)) + 1,
+    rashi: Math.floor(lon / 30) % 12,
+  };
+}
+// All 30 tithis, Shukla Pratipada first
+export const TITHI_NAMES: Name[] = Array.from({ length: 30 }, (_, i) => tithiWithPaksha(i));
+
+export interface DayMatch {
+  date: Date; // civil date (midnight IST)
+  sunrise: Date;
+  sunset: Date;
+  at: Date; // the sunrise or sunset that was checked
+  starts: Date | null; // when the nakshatra or tithi began
+  ends: Date | null; // when it ends
+}
+
+// Days, from `from` onwards (or backwards), on which the given nakshatra or tithi
+// is running at sunrise or at sunset in Hyderabad.
+export function findDays(opts: {
+  kind: 'nakshatra' | 'tithi';
+  index: number; // into NAKSHATRA_NAMES or TITHI_NAMES
+  at: DayMoment;
+  from: Date;
+  direction: 1 | -1;
+  count: number;
+  maxDays?: number;
+}): DayMatch[] {
+  const f = opts.kind === 'nakshatra' ? siderealMoon : elongation;
+  const span = opts.kind === 'nakshatra' ? 360 / 27 : 12;
+  const total = opts.kind === 'nakshatra' ? 27 : 30;
+  const { year, month, day } = istDateOf(opts.from);
+  const matches: DayMatch[] = [];
+  for (let i = 0; i <= (opts.maxDays ?? 400) && matches.length < opts.count; i++) {
+    const midnight = new Date(Date.UTC(year, month, day + i * opts.direction) - IST_MS);
+    // Skip days where the Moon is far from the target, without the slower sunrise search
+    const rough = Math.floor(f(new Date(midnight.getTime() + 12 * 3600000)) / span) % total;
+    const distance = Math.min((rough - opts.index + total) % total, (opts.index - rough + total) % total);
+    if (distance > 2) continue;
+    const sunrise = riseSet(1, midnight);
+    const sunset = riseSet(-1, sunrise);
+    const at = opts.at === 'sunrise' ? sunrise : sunset;
+    if (Math.floor(f(at) / span) % total !== opts.index) continue;
+    const prevBoundary = (opts.index * span) % 360;
+    const starts = findCrossing(f, prevBoundary, new Date(at.getTime() - 40 * 3600000));
+    const ends = findCrossing(f, (((opts.index + 1) % total) * span) % 360, at);
+    matches.push({ date: midnight, sunrise, sunset, at, starts, ends });
+  }
+  return matches;
+}
+
+// Pradosha: the first 6 ghatis (2 h 24 min) after sunset
+const PRADOSHA_MS = 144 * 60000;
+
+// Sruthi Kainkaryam is held once a month on the day Anuradha nakshatra is
+// running in the evening. When Anuradha spans two sunsets, the day on which it
+// covers more of the pradosha after sunset is taken.
+export function findSruthiKainkaryamDays(from: Date, direction: 1 | -1, count: number): DayMatch[] {
+  const index = NAKSHATRAS.findIndex((x) => x.en === 'Anuradha');
+  const evening = (m: DayMatch) => {
+    const start = Math.max(m.sunset.getTime(), m.starts?.getTime() ?? 0);
+    const end = Math.min(m.sunset.getTime() + PRADOSHA_MS, m.ends?.getTime() ?? Infinity);
+    return Math.max(0, end - start);
+  };
+  // Start a day early so a two-sunset Anuradha that began yesterday is weighed as a pair
+  const start = new Date(from.getTime() - direction * DAY_MS);
+  const days = findDays({ kind: 'nakshatra', index, at: 'sunset', from: start, direction, count: count * 2 + 2 })
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+  const chosen: DayMatch[] = [];
+  for (let i = 0; i < days.length; i++) {
+    const next = days[i + 1];
+    if (next && next.date.getTime() - days[i].date.getTime() === DAY_MS) {
+      chosen.push(evening(next) > evening(days[i]) ? next : days[i]);
+      i++;
+    } else {
+      chosen.push(days[i]);
+    }
+  }
+  if (direction === -1) chosen.reverse();
+  // Searching backwards from today must not return a day that is still ahead
+  const today = (() => {
+    const { year, month, day } = istDateOf(from);
+    return Date.UTC(year, month, day) - IST_MS;
+  })();
+  return chosen.filter((m) => (direction === 1 ? m.date.getTime() >= today : m.date.getTime() < today)).slice(0, count);
 }

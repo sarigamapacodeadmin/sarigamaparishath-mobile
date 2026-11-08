@@ -1,13 +1,15 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PanchangamCard } from '../../components/panchangam-card';
+import { AddBirthDetailsCard, MemberPanchangam } from '../../components/member-panchangam';
 import { Button, Card, Screen, Title, styles as ui } from '../../components/ui';
-import { fetchActivities } from '../../lib/api';
+import { fetchActivities, fetchMyMember } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { useLanguage } from '../../lib/language';
 import { colors } from '../../lib/theme';
-import type { Activity } from '../../shared/types';
+import { hasBirthDetails, memberLocation } from '../../shared/personal-panchangam';
+import type { Activity, Member } from '../../shared/types';
 
 // The four core values, as on the website's home page (app/components/home/core-values.tsx)
 const CORE_VALUES = [
@@ -49,6 +51,26 @@ export default function HomeScreen() {
   const { t, language } = useLanguage();
   const { session } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [member, setMember] = useState<Member | null>(null);
+  const userId = session?.user?.id;
+
+  // Signed-in members get the panchangam for their city, and personal cards once their birth details are in
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) {
+        setMember(null);
+        return;
+      }
+      let active = true;
+      fetchMyMember()
+        .then((m) => active && setMember(m))
+        .catch(() => active && setMember(null));
+      return () => {
+        active = false;
+      };
+    }, [userId])
+  );
+  const location = memberLocation(member);
 
   useEffect(() => {
     fetchActivities()
@@ -62,8 +84,13 @@ export default function HomeScreen() {
         <Image source={require('../../../assets/parishath-logo.jpg')} style={styles.logo} accessibilityIgnoresInvertColors />
         <Text style={styles.name}>{t('Sanatana Rishiproktha Gayatri Maha Parishath', 'సనాతన ఋషిప్రోక్త గాయత్రీ మహా పరిషత్')}</Text>
         <View style={{ alignSelf: 'stretch', marginTop: 14 }}>
-          <PanchangamCard />
+          <PanchangamCard location={location} />
         </View>
+        {member && (
+          <View style={{ alignSelf: 'stretch' }}>
+            {hasBirthDetails(member) ? <MemberPanchangam member={member} location={location} /> : <AddBirthDetailsCard />}
+          </View>
+        )}
         <Text style={styles.ornament}>— ✦ —</Text>
         <Text style={styles.tagline}>
           {t(
