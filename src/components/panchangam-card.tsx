@@ -1,5 +1,5 @@
 // Today's panchangam and sankalpam for the home screen, worked out on the phone
-// from src/shared/panchangam.ts (Hyderabad sunrise, Lahiri ayanamsa), like the
+// from src/shared/panchangam.ts (sunrise at Hyderabad or the member's city, Lahiri ayanamsa), like the
 // website's app/components/home/panchangam-card.tsx.
 
 import { useEffect, useState } from 'react';
@@ -7,12 +7,15 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLanguage } from '../lib/language';
 import { colors } from '../lib/theme';
 import {
+  HYDERABAD,
   PANCHANGAM_LABELS,
   computePanchangam,
+  methodText,
   formatIstTime,
   istDateOf,
   shortMonth,
   type Panchangam,
+  type PanchangamLocation,
 } from '../shared/panchangam';
 
 const dayKey = () => {
@@ -21,15 +24,19 @@ const dayKey = () => {
 };
 
 // Recalculates when the date changes in India (checked every minute)
-function useTodaysPanchangam(): Panchangam {
-  const [state, setState] = useState(() => ({ key: dayKey(), value: computePanchangam() }));
+function useTodaysPanchangam(place: PanchangamLocation): Panchangam {
+  const placeKey = `${place.latitude},${place.longitude}`;
+  const [state, setState] = useState(() => ({ key: dayKey() + placeKey, value: computePanchangam(new Date(), place) }));
   useEffect(() => {
-    const id = setInterval(() => {
-      const key = dayKey();
-      setState((s) => (s.key === key ? s : { key, value: computePanchangam() }));
-    }, 60000);
+    const update = () => {
+      const key = dayKey() + placeKey;
+      setState((s) => (s.key === key ? s : { key, value: computePanchangam(new Date(), place) }));
+    };
+    update();
+    const id = setInterval(update, 60000);
     return () => clearInterval(id);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeKey]);
   return state.value;
 }
 
@@ -75,9 +82,9 @@ const moon = StyleSheet.create({
   full: { backgroundColor: LIT },
 });
 
-export function PanchangamCard() {
+export function PanchangamCard({ location = HYDERABAD }: { location?: PanchangamLocation }) {
   const { language } = useLanguage();
-  const p = useTodaysPanchangam();
+  const p = useTodaysPanchangam(location);
   const [expanded, setExpanded] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const L = PANCHANGAM_LABELS[language];
@@ -120,7 +127,7 @@ export function PanchangamCard() {
           </Text>
           {showInfo && (
             <Text style={styles.info}>
-              {L.info} {L.method}
+              {L.info} {methodText(p, language)}
             </Text>
           )}
           <Text style={styles.sankalpam} numberOfLines={expanded ? undefined : 7}>
