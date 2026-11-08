@@ -43,6 +43,14 @@ export interface Member {
   state?: string | null;
   gotra?: string | null;
   bio_en?: string | null;
+  birth_date?: string | null; // YYYY-MM-DD
+  birth_time?: string | null; // HH:MM or HH:MM:SS, India time
+  birth_place?: string | null;
+  birth_latitude?: number | null;
+  birth_longitude?: number | null;
+  city_latitude?: number | null;
+  city_longitude?: number | null;
+  language_preference?: 'en' | 'te' | null;
   created_at: string;
 }
 

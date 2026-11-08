@@ -1,20 +1,74 @@
 import { Redirect, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Banner, Button, Card, Field, Loading, Screen, Title, styles as ui } from '../components/ui';
-import { ApiError, createMyMember, fetchMyMember } from '../lib/api';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Banner, Button, Card, Chip, Field, Loading, Screen, Title, styles as ui } from '../components/ui';
+import { ApiError, createMyMember, deleteMyPersonalData, fetchMyMember, updateMyMember } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLanguage } from '../lib/language';
 import { supabase } from '../lib/supabase';
 import { colors } from '../lib/theme';
 import { mustChangePassword } from '../shared/default-login';
+import { findPlace, placeLabel, suggestPlaces } from '../shared/places';
 import type { Member } from '../shared/types';
 
-const EMPTY_FORM = { name: '', phone: '', city: '', state: '', gotra: '', bio_en: '' };
+const EMPTY_FORM = {
+  name: '',
+  phone: '',
+  city: '',
+  state: '',
+  gotra: '',
+  bio_en: '',
+  birth_date: '',
+  birth_time: '',
+  birth_place: '',
+  language_preference: '',
+};
+
+const formFrom = (m: Member) => ({
+  name: m.name || '',
+  phone: m.phone || '',
+  city: m.city || '',
+  state: m.state || '',
+  gotra: m.gotra || '',
+  bio_en: m.bio_en || '',
+  birth_date: m.birth_date || '',
+  birth_time: (m.birth_time || '').slice(0, 5),
+  birth_place: m.birth_place || '',
+  language_preference: m.language_preference || '',
+});
+
+// Text field with tap-to-fill suggestions from the place list
+function PlaceField({ label, value, onChangeText }: { label: string; value: string; onChangeText: (v: string) => void }) {
+  const { language, t } = useLanguage();
+  const [focused, setFocused] = useState(false);
+  const matched = findPlace(value);
+  const suggestions = focused && !matched ? suggestPlaces(value) : [];
+  return (
+    <View>
+      <Field
+        label={label}
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        placeholder={t('Start typing, e.g. Vijayawada', 'టైప్ చేయండి, ఉదా. విజయవాడ')}
+      />
+      {suggestions.length > 0 && (
+        <View style={styles.suggestions}>
+          {suggestions.map((pl) => (
+            <Pressable key={pl.en} accessibilityRole="button" onPress={() => onChangeText(placeLabel(pl, language))} style={styles.suggestion}>
+              <Text style={{ color: colors.brand700 }}>{placeLabel(pl, language)}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
 
 // The member's own profile, as on the website's /member/profile
 export default function ProfileScreen() {
-  const { t } = useLanguage();
+  const { t, setLanguage } = useLanguage();
   const { session, user, loading: authLoading, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [member, setMember] = useState<Member | null>(null);
@@ -24,6 +78,8 @@ export default function ProfileScreen() {
   const [donations, setDonations] = useState({ total: 0, count: 0 });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const set = (key: keyof typeof EMPTY_FORM) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -34,14 +90,7 @@ export default function ProfileScreen() {
     try {
       const m = await fetchMyMember();
       setMember(m);
-      setForm({
-        name: m.name || '',
-        phone: m.phone || '',
-        city: m.city || '',
-        state: m.state || '',
-        gotra: m.gotra || '',
-        bio_en: m.bio_en || '',
-      });
+      setForm(formFrom(m));
       // Donation totals, where donations carry the member's login
       const { data } = await supabase.from('donations').select('amount').eq('user_id', user.id).eq('status', 'completed');
       if (data) {
@@ -101,32 +150,57 @@ export default function ProfileScreen() {
     }
   };
 
+  const errorText = (code: string) => {
+    switch (code) {
+      case 'name_required':
+        return t('Please enter your name.', 'దయచేసి మీ పేరు నమోదు చేయండి.');
+      case 'phone_required':
+        return t('Please enter your phone number.', 'దయచేసి మీ ఫోన్ నంబర్ నమోదు చేయండి.');
+      case 'invalid_birth_date':
+        return t('Please enter the date of birth as YYYY-MM-DD.', 'దయచేసి పుట్టిన తేదీని YYYY-MM-DD గా నమోదు చేయండి.');
+      case 'invalid_birth_time':
+        return t('Please enter the time of birth as HH:MM (24-hour).', 'దయచేసి పుట్టిన సమయాన్ని HH:MM (24 గంటలు) గా నమోదు చేయండి.');
+      case 'birth_details_not_ready':
+        return t('Birth details cannot be saved yet. Please try again later.', 'పుట్టిన వివరాలు ఇంకా సేవ్ చేయలేము. దయచేసి కొంతసేపటి తర్వాత ప్రయత్నించండి.');
+      default:
+        return code || t('Failed to update profile', 'ప్రొఫైల్ నవీకరణ విఫలమైంది');
+    }
+  };
+
   const saveProfile = async () => {
     if (!member) return;
     setError('');
     setSuccess('');
     setSaving(true);
     try {
-      const { error: updateError } = await supabase
-        .from('members')
-        .update({
-          name: form.name,
-          phone: form.phone,
-          city: form.city || null,
-          state: form.state || null,
-          gotra: form.gotra || null,
-          bio_en: form.bio_en || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', member.id);
-      if (updateError) throw updateError;
-      setMember({ ...member, ...form });
+      const updated = await updateMyMember(form);
+      setMember(updated);
+      setForm(formFrom(updated));
+      if (updated.language_preference === 'en' || updated.language_preference === 'te') setLanguage(updated.language_preference);
       setSuccess(t('Profile updated successfully.', 'ప్రొఫైల్ విజయవంతంగా నవీకరించబడింది.'));
       setEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('Failed to update profile', 'ప్రొఫైల్ నవీకరణ విఫలమైంది'));
+      setError(err instanceof ApiError && err.code ? errorText(err.code) : t('Failed to update profile', 'ప్రొఫైల్ నవీకరణ విఫలమైంది'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const deletePersonalData = async () => {
+    setError('');
+    setSuccess('');
+    setDeleting(true);
+    try {
+      const updated = await deleteMyPersonalData();
+      setMember(updated);
+      setForm(formFrom(updated));
+      setEditing(false);
+      setConfirmingDelete(false);
+      setSuccess(t('Your personal details have been deleted.', 'మీ వ్యక్తిగత వివరాలు తొలగించబడ్డాయి.'));
+    } catch {
+      setError(t('Could not delete your data', 'మీ వివరాలు తొలగించడం విఫలమైంది'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -166,6 +240,13 @@ export default function ProfileScreen() {
     { label: t('State', 'రాష్ట్రం'), value: member.state },
     { label: t('Gotra', 'గోత్రం'), value: member.gotra },
     { label: t('About me', 'నా గురించి'), value: member.bio_en },
+    { label: t('Date of birth', 'పుట్టిన తేదీ'), value: member.birth_date },
+    { label: t('Time of birth (IST)', 'పుట్టిన సమయం (IST)'), value: member.birth_time?.slice(0, 5) },
+    { label: t('Place of birth', 'పుట్టిన ఊరు'), value: member.birth_place },
+    {
+      label: t('Preferred language', 'ఇష్టమైన భాష'),
+      value: member.language_preference === 'te' ? 'తెలుగు' : member.language_preference === 'en' ? 'English' : null,
+    },
   ];
 
   return (
@@ -194,10 +275,50 @@ export default function ProfileScreen() {
         <Card>
           <Field label={t('Full name', 'పూర్తి పేరు')} value={form.name} onChangeText={set('name')} />
           <Field label={t('Phone', 'ఫోన్')} value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
-          <Field label={t('City', 'నగరం')} value={form.city} onChangeText={set('city')} />
+          <PlaceField label={t('City', 'నగరం')} value={form.city} onChangeText={set('city')} />
           <Field label={t('State', 'రాష్ట్రం')} value={form.state} onChangeText={set('state')} />
           <Field label={t('Gotra', 'గోత్రం')} value={form.gotra} onChangeText={set('gotra')} />
           <Field label={t('About me', 'నా గురించి')} value={form.bio_en} onChangeText={set('bio_en')} multiline />
+
+          <Text style={styles.section}>{t('Birth details', 'జన్మ వివరాలు')}</Text>
+          <Text style={[ui.muted, { marginBottom: 10 }]}>
+            {t(
+              'Used only to show your birth star and a personalised panchangam. Only you can see them.',
+              'మీ జన్మ నక్షత్రం, మీ కోసం పంచాంగం చూపడానికి మాత్రమే. ఇవి మీకు మాత్రమే కనిపిస్తాయి.'
+            )}
+          </Text>
+          <Field
+            label={t('Date of birth (YYYY-MM-DD)', 'పుట్టిన తేదీ (YYYY-MM-DD)')}
+            value={form.birth_date}
+            onChangeText={set('birth_date')}
+            placeholder="1975-08-15"
+            keyboardType="numbers-and-punctuation"
+            maxLength={10}
+          />
+          <Field
+            label={t('Time of birth, 24-hour IST (HH:MM)', 'పుట్టిన సమయం, 24 గంటలు IST (HH:MM)')}
+            value={form.birth_time}
+            onChangeText={set('birth_time')}
+            placeholder="06:30"
+            keyboardType="numbers-and-punctuation"
+            maxLength={5}
+          />
+          <PlaceField label={t('Place of birth', 'పుట్టిన ఊరు')} value={form.birth_place} onChangeText={set('birth_place')} />
+          {form.birth_place && !findPlace(form.birth_place) ? (
+            <Text style={[ui.muted, { marginTop: -6, marginBottom: 10 }]}>
+              {t(
+                'Not in our list. Pick the nearest town from the suggestions so we can work out your birth star.',
+                'ఇది మా జాబితాలో లేదు. మీ జన్మ నక్షత్రం కోసం సూచనల నుండి దగ్గరి ఊరు ఎంచుకోండి.'
+              )}
+            </Text>
+          ) : null}
+
+          <Text style={styles.rowLabel}>{t('Preferred language', 'ఇష్టమైన భాష')}</Text>
+          <View style={styles.chips}>
+            {([['', t('Not set', 'ఎంచుకోలేదు')], ['en', 'English'], ['te', 'తెలుగు']] as const).map(([value, label]) => (
+              <Chip key={value || 'none'} label={label} selected={form.language_preference === value} onPress={() => set('language_preference')(value)} />
+            ))}
+          </View>
           <Button label={t('Save', 'సేవ్ చేయండి')} onPress={saveProfile} loading={saving} />
           <Button
             variant="secondary"
@@ -224,6 +345,24 @@ export default function ProfileScreen() {
 
       <Button variant="secondary" label={t('Change password', 'పాస్‌వర్డ్ మార్చండి')} onPress={() => router.push('/change-password')} />
       <Button variant="secondary" label={t('Logout', 'లాగౌట్')} onPress={logout} />
+
+      <Card>
+        <Text style={styles.danger}>{t('Delete my personal data', 'నా వ్యక్తిగత వివరాలు తొలగించండి')}</Text>
+        <Text style={[ui.muted, { marginBottom: 12 }]}>
+          {t(
+            'This removes your birth details, city, state, gotra, bio and language choice. Your name, phone and email stay so you can still log in and get donation receipts.',
+            'ఇది మీ జన్మ వివరాలు, నగరం, రాష్ట్రం, గోత్రం, మీ గురించి, భాష ఎంపికను తొలగిస్తుంది. లాగిన్, విరాళాల రసీదుల కోసం మీ పేరు, ఫోన్, ఈమెయిల్ ఉంటాయి.'
+          )}
+        </Text>
+        {confirmingDelete ? (
+          <>
+            <Button label={t('Yes, delete them', 'అవును, తొలగించండి')} onPress={deletePersonalData} loading={deleting} />
+            <Button variant="secondary" label={t('Keep them', 'ఉంచండి')} onPress={() => setConfirmingDelete(false)} />
+          </>
+        ) : (
+          <Button variant="secondary" label={t('Delete my personal data', 'నా వ్యక్తిగత వివరాలు తొలగించండి')} onPress={() => setConfirmingDelete(true)} />
+        )}
+      </Card>
     </Screen>
   );
 }
@@ -235,4 +374,9 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, fontWeight: '700', color: colors.brand600 },
   row: { marginBottom: 12 },
   rowLabel: { fontWeight: '600', color: colors.brand600, marginBottom: 2 },
+  section: { fontSize: 18, fontWeight: '600', color: colors.brand600, marginTop: 8, marginBottom: 4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6, marginBottom: 14 },
+  suggestions: { marginTop: -8, marginBottom: 12, borderWidth: 1, borderColor: colors.gold200, borderRadius: 6, backgroundColor: colors.white },
+  suggestion: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: colors.gold100 },
+  danger: { fontSize: 18, fontWeight: '600', color: colors.vermilion700, marginBottom: 6 },
 });
