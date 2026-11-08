@@ -123,9 +123,26 @@ jobs:
           echo "::error::Could not download Gradle from services.gradle.org after 5 attempts (their server is down; re-run later)"
           exit 1
 
-      - name: Build release APK
+      # Library downloads (Maven Central, GitHub release files) can hit the same
+      # 504s. Gradle retries each download itself, and anything that did
+      # download stays in its cache, so a second or third build attempt only
+      # fetches what is still missing.
+      - name: Build release APK (with retries)
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew assembleRelease --no-daemon \
+                -Dorg.gradle.internal.repository.max.retries=8 \
+                -Dorg.gradle.internal.repository.initial.backoff=2000 \
+                -Dorg.gradle.internal.http.connectionTimeout=120000 \
+                -Dorg.gradle.internal.http.socketTimeout=120000; then
+              exit 0
+            fi
+            [ "$attempt" = 3 ] && break
+            echo "::warning::Build attempt $attempt failed, retrying in $((attempt * 60)) seconds (often a download server timing out)"
+            sleep $((attempt * 60))
+          done
+          exit 1
 
       - uses: actions/upload-artifact@v4
         with:
