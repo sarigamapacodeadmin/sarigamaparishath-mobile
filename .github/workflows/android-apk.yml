@@ -107,6 +107,22 @@ jobs:
       - name: Generate the Android project
         run: npx expo prebuild --platform android --no-install
 
+      # services.gradle.org is sometimes slow or briefly down (504 / read
+      # timeouts). Give the wrapper download 2 minutes instead of 10 seconds
+      # and retry it a few times before starting the real build.
+      - name: Download Gradle (with retries)
+        working-directory: android
+        run: |
+          sed -i 's/^networkTimeout=.*/networkTimeout=120000/' gradle/wrapper/gradle-wrapper.properties
+          grep -q '^networkTimeout=' gradle/wrapper/gradle-wrapper.properties || echo 'networkTimeout=120000' >> gradle/wrapper/gradle-wrapper.properties
+          for attempt in 1 2 3 4 5; do
+            if ./gradlew --version --no-daemon; then exit 0; fi
+            echo "::warning::Gradle download attempt $attempt failed, retrying in $((attempt * 30)) seconds"
+            sleep $((attempt * 30))
+          done
+          echo "::error::Could not download Gradle from services.gradle.org after 5 attempts (their server is down; re-run later)"
+          exit 1
+
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
