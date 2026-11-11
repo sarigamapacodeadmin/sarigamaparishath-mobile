@@ -8,13 +8,16 @@ import {
   NAKSHATRA_NAMES,
   RASHI_NAMES,
   computePanchangam,
+  masaAt,
   moonPositionAt,
+  panchangamAt,
   type Hora,
   type Observance,
   type Panchangam,
   type PanchangamLocation,
 } from './panchangam';
 import { findPlace } from './places';
+import type { KshouraPanchangam, KshouraProfile } from './kshoura';
 
 type Lang = 'en' | 'te';
 interface Name {
@@ -35,6 +38,11 @@ export interface BirthDetails {
   city?: string | null;
   city_latitude?: number | null;
   city_longitude?: number | null;
+  life_stage?: string | null;
+  // Worked out by the server from the birth details (see birthChart); missing
+  // when an older server or no connection didn't send them
+  janma_nakshatra?: number | null;
+  janma_masa?: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -76,6 +84,60 @@ export function birthStar(m: BirthDetails): BirthStar | null {
   if (Number.isNaN(moment.getTime())) return null;
   const pos = moonPositionAt(moment);
   return { ...pos, nakshatraName: NAKSHATRA_NAMES[pos.nakshatra], rashiName: RASHI_NAMES[pos.rashi] };
+}
+
+// The birth chart values the haircut card needs, counted from 1: the Moon's
+// nakshatra at birth (Ashvini 1) and the amanta lunar month at birth (Chaitra 1).
+// Without a birth time, a value is known only if it was the same all day; null
+// means not known. The website's /api/member/me sends these with the profile.
+export interface BirthChart {
+  janma_nakshatra: number | null;
+  janma_masa: number | null;
+}
+
+export function birthChart(m: BirthDetails | null | undefined): BirthChart {
+  const none = { janma_nakshatra: null, janma_masa: null };
+  if (!m?.birth_date || !/^\d{4}-\d{2}-\d{2}$/.test(m.birth_date)) return none;
+  const at = (hhmm: string) => new Date(`${m.birth_date}T${hhmm}:00+05:30`);
+  if (m.birth_time) {
+    const moment = at(m.birth_time.slice(0, 5));
+    if (Number.isNaN(moment.getTime())) return none;
+    return { janma_nakshatra: moonPositionAt(moment).nakshatra + 1, janma_masa: masaAt(moment).masa };
+  }
+  const start = at('00:00');
+  if (Number.isNaN(start.getTime())) return none;
+  const end = new Date(start.getTime() + DAY_MS - 60000);
+  const [s1, s2] = [moonPositionAt(start).nakshatra, moonPositionAt(end).nakshatra];
+  const [m1, m2] = [masaAt(start).masa, masaAt(end).masa];
+  return { janma_nakshatra: s1 === s2 ? s1 + 1 : null, janma_masa: m1 === m2 ? m1 : null };
+}
+
+// The inputs of the haircut card (lib/kshoura.ts) for this moment at a place
+export function kshouraPanchangam(now: Date, place: PanchangamLocation): KshouraPanchangam {
+  const day = computePanchangam(now, place);
+  const m = panchangamAt(now);
+  return {
+    weekday: day.weekdayIndex,
+    tithi: m.tithi,
+    nakshatra: m.nakshatra,
+    yoga: m.yoga,
+    karana: m.karana,
+    masa: m.masa,
+    adhika: m.adhika,
+    sankranti: day.sankranti,
+    sunrise: day.sunrise,
+    sunset: day.sunset,
+    nextSunrise: day.nextSunrise,
+  };
+}
+
+export function kshouraProfile(m: BirthDetails): KshouraProfile {
+  return {
+    lifeStage: m.life_stage ?? null,
+    birthDetailsSaved: !!m.birth_date,
+    janmaNakshatra: m.janma_nakshatra,
+    janmaMasa: m.janma_masa,
+  };
 }
 
 // ---------------------------------------------------------------------------

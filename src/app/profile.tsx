@@ -1,4 +1,4 @@
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Banner, Button, Card, Chip, Field, Loading, Screen, Title, styles as ui } from '../components/ui';
@@ -10,6 +10,7 @@ import { colors } from '../lib/theme';
 import { mustChangePassword } from '../shared/default-login';
 import { findPlace, placeLabel, suggestPlaces } from '../shared/places';
 import type { Member } from '../shared/types';
+import { KSHOURA_LABELS, LIFE_STAGES, LIFE_STAGE_LABELS, isLifeStage } from '../shared/kshoura';
 
 const EMPTY_FORM = {
   name: '',
@@ -22,6 +23,7 @@ const EMPTY_FORM = {
   birth_time: '',
   birth_place: '',
   language_preference: '',
+  life_stage: '',
 };
 
 const formFrom = (m: Member) => ({
@@ -35,6 +37,7 @@ const formFrom = (m: Member) => ({
   birth_time: (m.birth_time || '').slice(0, 5),
   birth_place: m.birth_place || '',
   language_preference: m.language_preference || '',
+  life_stage: m.life_stage || '',
 });
 
 // Text field with tap-to-fill suggestions from the place list
@@ -68,7 +71,9 @@ function PlaceField({ label, value, onChangeText }: { label: string; value: stri
 
 // The member's own profile, as on the website's /member/profile
 export default function ProfileScreen() {
-  const { t, setLanguage } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
+  // "Fill in profile" on the Home screen's haircut card opens the form
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
   const { session, user, loading: authLoading, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [member, setMember] = useState<Member | null>(null);
@@ -91,6 +96,7 @@ export default function ProfileScreen() {
       const m = await fetchMyMember();
       setMember(m);
       setForm(formFrom(m));
+      if (edit === '1') setEditing(true);
       // Donation totals, where donations carry the member's login
       const { data } = await supabase.from('donations').select('amount').eq('user_id', user.id).eq('status', 'completed');
       if (data) {
@@ -177,7 +183,10 @@ export default function ProfileScreen() {
       setMember(updated);
       setForm(formFrom(updated));
       if (updated.language_preference === 'en' || updated.language_preference === 'te') setLanguage(updated.language_preference);
-      setSuccess(t('Profile updated successfully.', 'ప్రొఫైల్ విజయవంతంగా నవీకరించబడింది.'));
+      setSuccess(
+        t('Profile updated successfully.', 'ప్రొఫైల్ విజయవంతంగా నవీకరించబడింది.') +
+          (updated.life_stage_not_saved ? ` ${KSHOURA_LABELS[language].lifeStageNotSaved}` : '')
+      );
       setEditing(false);
     } catch (err) {
       setError(err instanceof ApiError && err.code ? errorText(err.code) : t('Failed to update profile', 'ప్రొఫైల్ నవీకరణ విఫలమైంది'));
@@ -246,6 +255,10 @@ export default function ProfileScreen() {
     {
       label: t('Preferred language', 'ఇష్టమైన భాష'),
       value: member.language_preference === 'te' ? 'తెలుగు' : member.language_preference === 'en' ? 'English' : null,
+    },
+    {
+      label: KSHOURA_LABELS[language].lifeStageLabel,
+      value: isLifeStage(member.life_stage) ? LIFE_STAGE_LABELS[member.life_stage][language] : null,
     },
   ];
 
@@ -319,6 +332,24 @@ export default function ProfileScreen() {
               <Chip key={value || 'none'} label={label} selected={form.language_preference === value} onPress={() => set('language_preference')(value)} />
             ))}
           </View>
+          <Text style={styles.rowLabel}>{KSHOURA_LABELS[language].lifeStageLabel}</Text>
+          <View accessibilityRole="radiogroup" style={{ marginBottom: 12 }}>
+            {LIFE_STAGES.map((stage) => {
+              const selected = form.life_stage === stage;
+              return (
+                <Pressable
+                  key={stage}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => set('life_stage')(stage)}
+                  style={[styles.radio, selected && styles.radioSelected]}
+                >
+                  <View style={[styles.radioDot, selected && styles.radioDotSelected]} />
+                  <Text style={{ color: colors.brand700, flex: 1 }}>{LIFE_STAGE_LABELS[stage][language]}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
           <Button label={t('Save', 'సేవ్ చేయండి')} onPress={saveProfile} loading={saving} />
           <Button
             variant="secondary"
@@ -368,6 +399,21 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  radio: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: colors.gold200,
+    borderRadius: 6,
+    backgroundColor: colors.white,
+  },
+  radioSelected: { borderColor: colors.brand600, backgroundColor: colors.brand50 },
+  radioDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: colors.brand600 },
+  radioDotSelected: { backgroundColor: colors.brand600, borderColor: colors.brand600 },
   name: { fontSize: 24, fontWeight: '600', color: colors.brand600, marginBottom: 4 },
   stats: { flexDirection: 'row', gap: 12 },
   stat: { flex: 1, alignItems: 'center' },

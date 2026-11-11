@@ -72,6 +72,9 @@ export interface Panchangam {
   durmuhurtam: [Date, Date][];
   horas: Hora[];
   nextSunrise: Date;
+  // The Sun enters a new rasi between the previous sunset and this day's sunset
+  // (an entry after sunset counts for the next day)
+  sankranti: boolean;
   weekdayIndex: number; // 0 = Sunday
   nakshatraIndex: number; // at sunrise, 0 = Ashvini
   moonRashiIndex: number; // at sunrise, 0 = Mesha
@@ -561,6 +564,7 @@ export function computePanchangam(now: Date = new Date(), place: PanchangamLocat
 
   const sunrise = riseSet(1, midnight, place);
   const sunset = riseSet(-1, sunrise, place);
+  const prevSunset = riseSet(-1, new Date(sunrise.getTime() - DAY_MS), place);
   const nextSunrise = riseSet(1, new Date(midnight.getTime() + DAY_MS), place);
 
   // Lunar month: named from the Sun's sign at the new moon that began it (amanta);
@@ -663,6 +667,7 @@ export function computePanchangam(now: Date = new Date(), place: PanchangamLocat
     durmuhurtam,
     horas,
     nextSunrise,
+    sankranti: Math.floor(siderealSun(prevSunset) / 30) !== Math.floor(siderealSun(sunset) / 30),
     weekdayIndex: weekday,
     nakshatraIndex: Math.floor(siderealMoon(sunrise) / (360 / 27)) % 27,
     moonRashiIndex: Math.floor(siderealMoon(sunrise) / 30) % 12,
@@ -804,6 +809,56 @@ export function moonPositionAt(date: Date): { nakshatra: number; pada: number; r
     rashi: Math.floor(lon / 30) % 12,
   };
 }
+export const YOGA_NAMES: Name[] = YOGAS;
+export const MASA_NAMES: Name[] = MASAS;
+
+// The amanta lunar month running at a moment: named from the Sun's sign at the
+// new moon that began it; Adhika when no sankranti falls in it
+export function masaAt(date: Date): { masa: number; adhika: boolean } {
+  const prevNewMoon = Astronomy.SearchMoonPhase(0, date, -35)!.date;
+  const nextNewMoon = Astronomy.SearchMoonPhase(0, date, 35)!.date;
+  const rashiAtStart = Math.floor(siderealSun(prevNewMoon) / 30);
+  const rashiAtEnd = Math.floor(siderealSun(nextNewMoon) / 30);
+  return { masa: ((rashiAtStart + 1) % 12) + 1, adhika: rashiAtStart === rashiAtEnd };
+}
+
+// The panchangam values running at a given moment (not at sunrise), as numbers
+// counted from 1: tithi 1-30 (15 Purnima, 30 Amavasya), nakshatra 1-27
+// (Ashvini 1), yoga 1-27 (Vishkambha 1), masa 1-12 (Chaitra 1)
+export interface MomentPanchangam {
+  tithi: number;
+  nakshatra: number;
+  yoga: number;
+  karana: Name;
+  vishti: boolean;
+  masa: number;
+  adhika: boolean;
+  names: { tithi: Name; nakshatra: Name; yoga: Name; masa: Name };
+}
+
+export function panchangamAt(date: Date): MomentPanchangam {
+  const tithiIndex = Math.floor(elongation(date) / 12) % 30;
+  const karanaIndex = Math.floor(elongation(date) / 6) % 60;
+  const nakshatraIndex = Math.floor(siderealMoon(date) / (360 / 27)) % 27;
+  const yogaIndex = Math.floor(yogaAngle(date) / (360 / 27)) % 27;
+  const { masa, adhika } = masaAt(date);
+  return {
+    tithi: tithiIndex + 1,
+    nakshatra: nakshatraIndex + 1,
+    yoga: yogaIndex + 1,
+    karana: karanaName(karanaIndex),
+    vishti: karanaIndex >= 1 && karanaIndex <= 56 && (karanaIndex - 1) % 7 === 6,
+    masa,
+    adhika,
+    names: {
+      tithi: tithiWithPaksha(tithiIndex),
+      nakshatra: NAKSHATRAS[nakshatraIndex],
+      yoga: YOGAS[yogaIndex],
+      masa: MASAS[masa - 1],
+    },
+  };
+}
+
 // All 30 tithis, Shukla Pratipada first
 export const TITHI_NAMES: Name[] = Array.from({ length: 30 }, (_, i) => tithiWithPaksha(i));
 

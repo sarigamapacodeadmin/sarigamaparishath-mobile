@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PanchangamCard } from '../../components/panchangam-card';
 import { AddBirthDetailsCard, MemberPanchangam } from '../../components/member-panchangam';
+import { KshouraCard } from '../../components/kshoura-card';
 import { Button, Card, Screen, Title, styles as ui } from '../../components/ui';
 import { fetchActivities, fetchMyMember } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -52,6 +53,7 @@ export default function HomeScreen() {
   const { session } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [member, setMember] = useState<Member | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const userId = session?.user?.id;
 
   // Signed-in members get the panchangam for their city, and personal cards once their birth details are in
@@ -70,6 +72,22 @@ export default function HomeScreen() {
       };
     }, [userId])
   );
+
+  // Pull down to refresh: fetch the profile (and its birth star and month) again
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (userId) {
+        // Keep showing the old profile if the network fails
+        const m = await fetchMyMember().catch(() => null);
+        if (m) setMember(m);
+      }
+      const data = await fetchActivities().catch(() => null);
+      if (data) setActivities(data.slice(0, 4));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [userId]);
   const location = memberLocation(member);
 
   useEffect(() => {
@@ -79,7 +97,7 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <Screen>
+    <Screen refreshing={refreshing} onRefresh={refresh}>
       <View style={styles.hero}>
         <Image source={require('../../../assets/parishath-logo.jpg')} style={styles.logo} accessibilityIgnoresInvertColors />
         <Text style={styles.name}>{t('Sanatana Rishiproktha Gayatri Maha Parishath', 'సనాతన ఋషిప్రోక్త గాయత్రీ మహా పరిషత్')}</Text>
@@ -147,6 +165,9 @@ export default function HomeScreen() {
           <Button variant="secondary" label={t('All activities', 'అన్ని కార్యకలాపాలు')} onPress={() => router.push('/activities')} />
         </>
       )}
+
+      {/* Haircut today? (Kshoura): members with a profile only */}
+      {member && <KshouraCard member={member} location={location} />}
     </Screen>
   );
 }
