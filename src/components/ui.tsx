@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,10 +14,26 @@ import {
 import { useLanguage } from '../lib/language';
 import { colors } from '../lib/theme';
 
-export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
+// Pass onRefresh to allow pull-down-to-refresh
+export function Screen({
+  children,
+  scroll = true,
+  refreshing = false,
+  onRefresh,
+}: {
+  children: ReactNode;
+  scroll?: boolean;
+  refreshing?: boolean;
+  onRefresh?: () => void;
+}) {
   if (!scroll) return <View style={styles.screen}>{children}</View>;
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.screenContent}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
+    >
       {children}
     </ScrollView>
   );

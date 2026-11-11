@@ -51,6 +51,11 @@ export interface Member {
   city_latitude?: number | null;
   city_longitude?: number | null;
   language_preference?: 'en' | 'te' | null;
+  life_stage?: string | null; // marital status for the haircut card (see shared/kshoura.ts)
+  // Worked out by the website from the birth details; missing from an older server
+  janma_nakshatra?: number | null;
+  janma_masa?: number | null;
+  life_stage_not_saved?: boolean;
   created_at: string;
 }
 
