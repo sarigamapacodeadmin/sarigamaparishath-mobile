@@ -64,7 +64,7 @@ export function MemberPanchangam({
 }: {
   member: BirthDetails;
   location: PanchangamLocation;
-  children?: ReactNode; // shown first, under the heading (the haircut band)
+  children?: ReactNode; // shown below the slokams (the haircut band)
 }) {
   const { language } = useLanguage();
   const L = PERSONAL_LABELS[language];
@@ -122,7 +122,6 @@ export function MemberPanchangam({
   return (
     <View>
       <Text style={s.heading}>{L.heading}</Text>
-      {children}
 
       {/* Hora now */}
       <Card>
@@ -207,6 +206,9 @@ export function MemberPanchangam({
           </Pressable>
         ))}
       </ScrollView>
+
+      {/* Haircut band, below the slokams */}
+      {children}
 
       {/* Upcoming festivals */}
       {upcoming.length > 0 && (
