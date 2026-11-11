@@ -106,7 +106,16 @@ export default function HomeScreen() {
         </View>
         {member && (
           <View style={{ alignSelf: 'stretch' }}>
-            {hasBirthDetails(member) ? <MemberPanchangam member={member} location={location} /> : <AddBirthDetailsCard />}
+            {hasBirthDetails(member) ? (
+              <MemberPanchangam member={member} location={location}>
+                <KshouraCard member={member} location={location} />
+              </MemberPanchangam>
+            ) : (
+              <>
+                <KshouraCard member={member} location={location} />
+                <AddBirthDetailsCard />
+              </>
+            )}
           </View>
         )}
         <Text style={styles.ornament}>— ✦ —</Text>
@@ -165,9 +174,6 @@ export default function HomeScreen() {
           <Button variant="secondary" label={t('All activities', 'అన్ని కార్యకలాపాలు')} onPress={() => router.push('/activities')} />
         </>
       )}
-
-      {/* Haircut today? (Kshoura): members with a profile only */}
-      {member && <KshouraCard member={member} location={location} />}
     </Screen>
   );
 }

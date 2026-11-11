@@ -4,7 +4,7 @@
 // website's app/components/home/member-panchangam.tsx, from src/shared/personal-panchangam.ts.
 
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Button, Card, Chip, styles as ui } from './ui';
 import { useLanguage } from '../lib/language';
@@ -57,7 +57,15 @@ export function AddBirthDetailsCard() {
   );
 }
 
-export function MemberPanchangam({ member, location }: { member: BirthDetails; location: PanchangamLocation }) {
+export function MemberPanchangam({
+  member,
+  location,
+  children,
+}: {
+  member: BirthDetails;
+  location: PanchangamLocation;
+  children?: ReactNode; // shown first, under the heading (the haircut band)
+}) {
   const { language } = useLanguage();
   const L = PERSONAL_LABELS[language];
   const P = PANCHANGAM_LABELS[language];
@@ -114,6 +122,7 @@ export function MemberPanchangam({ member, location }: { member: BirthDetails; l
   return (
     <View>
       <Text style={s.heading}>{L.heading}</Text>
+      {children}
 
       {/* Hora now */}
       <Card>
