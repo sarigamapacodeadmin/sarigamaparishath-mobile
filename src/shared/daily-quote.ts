@@ -1,9 +1,7 @@
-// Which Deivathin Kural quote to show today. Copied from the web app's
+// Which Demuni Swaram quote to show today. Copied from the web app's
 // lib/daily-quote.ts; keep the two identical apart from this header comment.
-// The quotes table holds 365 quotes, Q-001 to Q-365, one for each day of the
-// year counted in India (1 January = Q-001). In a leap year 31 December wraps round to Q-001.
-
-export const QUOTE_COUNT = 365;
+// The card shows the active rows of the quotes table in Quote ID order, one a
+// day from 1 January (India time); repeats are switched off in the table.
 
 const IST_MS = 5.5 * 60 * 60 * 1000;
 
@@ -23,21 +21,21 @@ export function istDayOfYear(now: Date): number {
   return Math.round((today - start) / 86400000) + 1;
 }
 
-export function quoteIdFor(now: Date): string {
-  const n = ((istDayOfYear(now) - 1) % QUOTE_COUNT) + 1;
-  return `Q-${String(n).padStart(3, '0')}`;
+// Position (from 0) of today's quote among the active quotes in Quote ID order
+export function quoteIndexFor(now: Date, activeCount: number): number {
+  return (istDayOfYear(now) - 1) % activeCount;
 }
 
 export const QUOTE_LABELS = {
   en: {
-    title: 'Deivathin Kural',
+    title: 'Demuni Swaram',
     subtitle: 'Thought for the day',
     by: 'Sri Kanchi Paramacharya',
     showContext: 'Show the context of this quote',
     hideContext: 'Hide the context',
   },
   te: {
-    title: 'దైవత్తిన్ కురల్',
+    title: 'దేముని స్వరం',
     subtitle: 'నేటి సూక్తి',
     by: 'శ్రీ కంచి పరమాచార్య',
     showContext: 'ఈ సూక్తి సందర్భం చూపించు',

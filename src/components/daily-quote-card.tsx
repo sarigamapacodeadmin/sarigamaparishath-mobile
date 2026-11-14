@@ -1,4 +1,4 @@
-// Today's Deivathin Kural quote under the logo on Home, in the app language
+// Today's Demuni Swaram quote under the logo on Home, in the app language
 // only. The bulb in the bottom-right corner opens the context, then the
 // Parishath logo with the footer note. Texts come from the quotes table in
 // Supabase (web repo supabase/migrations/20261114_quotes.sql).
@@ -8,7 +8,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLanguage } from '../lib/language';
 import { supabase } from '../lib/supabase';
 import { colors } from '../lib/theme';
-import { QUOTE_LABELS, quoteIdFor, type DailyQuote } from '../shared/daily-quote';
+import { QUOTE_LABELS, quoteIndexFor, type DailyQuote } from '../shared/daily-quote';
 
 export function DailyQuoteCard() {
   const { language } = useLanguage();
@@ -18,15 +18,23 @@ export function DailyQuoteCard() {
 
   useEffect(() => {
     let cancelled = false;
-    supabase
-      .from('quotes')
-      .select('id, quote_telugu, quote_english, context, footer_note')
-      .eq('id', quoteIdFor(new Date()))
-      .eq('is_active', true)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (!cancelled && !error) setQuote(data as DailyQuote | null);
-      });
+    (async () => {
+      // Active quotes in Quote ID order, one a day (repeats are switched off in the table)
+      const { count, error } = await supabase
+        .from('quotes')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true);
+      if (error || !count) return;
+      const i = quoteIndexFor(new Date(), count);
+      const { data } = await supabase
+        .from('quotes')
+        .select('id, quote_telugu, quote_english, context, footer_note')
+        .eq('is_active', true)
+        .order('id')
+        .range(i, i)
+        .maybeSingle();
+      if (!cancelled && data) setQuote(data as DailyQuote);
+    })().catch(() => {});
     return () => {
       cancelled = true;
     };
