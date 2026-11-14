@@ -30,14 +30,14 @@ export const QUOTE_LABELS = {
   en: {
     title: 'Demuni Swaram',
     subtitle: 'Thought for the day',
-    by: 'Sri Kanchi Paramacharya',
+    by: 'Sri Sri Sri Chandrasekharendra Saraswathi Maha Swami',
     showContext: 'Show the context of this quote',
     hideContext: 'Hide the context',
   },
   te: {
     title: 'దేముని స్వరం',
     subtitle: 'నేటి సూక్తి',
-    by: 'శ్రీ కంచి పరమాచార్య',
+    by: 'శ్రీ శ్రీ శ్రీ చంద్రశేఖరేంద్ర సరస్వతీ మహాస్వామి',
     showContext: 'ఈ సూక్తి సందర్భం చూపించు',
     hideContext: 'సందర్భం దాచు',
   },
