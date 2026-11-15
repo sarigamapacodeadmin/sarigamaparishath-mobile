@@ -1,4 +1,4 @@
-// Today's Demuni Swaram quote under the logo on Home, in the app language
+// Today's Walking God quote under the logo on Home, in the app language
 // only. The bulb in the bottom-right corner opens the context, then the
 // Parishath logo with the footer note. Texts come from the quotes table in
 // Supabase (web repo supabase/migrations/20261114_quotes.sql).
@@ -44,15 +44,14 @@ export function DailyQuoteCard() {
   if (!quote) return null;
 
   return (
-    <View style={styles.card} accessibilityLabel={`${L.title}: ${L.subtitle}`}>
+    <View style={styles.card} accessibilityLabel={L.title}>
       <Text style={styles.heading}>
-        {L.title} · {L.subtitle}
+        {L.title}
       </Text>
       <Text style={styles.mark} accessibilityElementsHidden importantForAccessibility="no">
         “
       </Text>
       <Text style={styles.quote}>{language === 'en' ? quote.quote_english : quote.quote_telugu}</Text>
-      <Text style={styles.by}>— {L.by}</Text>
 
       {open && (
         <View style={{ marginTop: 12 }}>
@@ -94,7 +93,6 @@ const styles = StyleSheet.create({
   heading: { textAlign: 'center', color: '#86692f', fontWeight: '600', fontSize: 13 },
   mark: { color: colors.gold500, fontSize: 36, lineHeight: 40, marginTop: 8 },
   quote: { color: colors.brand700, fontSize: 19, lineHeight: 30 },
-  by: { color: colors.vermilion600, fontWeight: '600', textAlign: 'right', marginTop: 8 },
   context: { backgroundColor: '#fbf7ec', borderRadius: 6, padding: 10, color: '#374151', fontSize: 14, lineHeight: 21 },
   footer: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderTopWidth: 1, borderTopColor: colors.gold200, marginTop: 12, paddingTop: 10 },
   footerLogo: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: colors.gold200 },

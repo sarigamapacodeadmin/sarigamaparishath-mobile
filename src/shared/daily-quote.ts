@@ -1,4 +1,4 @@
-// Which Demuni Swaram quote to show today. Copied from the web app's
+// Which Walking God quote to show today. Copied from the web app's
 // lib/daily-quote.ts; keep the two identical apart from this header comment.
 // The card shows the active rows of the quotes table in Quote ID order, one a
 // day from 1 January (India time); repeats are switched off in the table.
@@ -28,16 +28,12 @@ export function quoteIndexFor(now: Date, activeCount: number): number {
 
 export const QUOTE_LABELS = {
   en: {
-    title: 'Demuni Swaram',
-    subtitle: 'Thought for the day',
-    by: 'Sri Sri Sri Chandrasekharendra Saraswathi Maha Swami',
+    title: "Walking God's Wishful Thoughts",
     showContext: 'Show the context of this quote',
     hideContext: 'Hide the context',
   },
   te: {
-    title: 'దేముని స్వరం',
-    subtitle: 'నేటి సూక్తి',
-    by: 'శ్రీ శ్రీ శ్రీ చంద్రశేఖరేంద్ర సరస్వతీ మహాస్వామి',
+    title: 'నడిచే దైవం - చూపిన మార్గం',
     showContext: 'ఈ సూక్తి సందర్భం చూపించు',
     hideContext: 'సందర్భం దాచు',
   },
