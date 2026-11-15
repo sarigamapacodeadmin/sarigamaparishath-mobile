@@ -2,6 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PanchangamCard } from '../../components/panchangam-card';
+import { DailyQuoteCard } from '../../components/daily-quote-card';
 import { AddBirthDetailsCard, MemberPanchangam } from '../../components/member-panchangam';
 import { KshouraCard } from '../../components/kshoura-card';
 import { Button, Card, Screen, Title, styles as ui } from '../../components/ui';
@@ -101,6 +102,7 @@ export default function HomeScreen() {
       <View style={styles.hero}>
         <Image source={require('../../../assets/parishath-logo.jpg')} style={styles.logo} accessibilityIgnoresInvertColors />
         <Text style={styles.name}>{t('Sanatana Rishiproktha Gayatri Maha Parishath', 'సనాతన ఋషిప్రోక్త గాయత్రీ మహా పరిషత్')}</Text>
+        <DailyQuoteCard />
         <View style={{ alignSelf: 'stretch', marginTop: 14 }}>
           <PanchangamCard location={location} />
         </View>
